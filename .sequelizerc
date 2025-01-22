@@ -1,0 +1,7 @@
+const { resolve } = require('path');
+
+module.exports = {
+  config: resolve('database/config/database.config.js'),
+  'seeders-path': resolve('database/seeders'),
+  'migrations-path': resolve('database/migrations'),
+};
