@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "start": "nodemon",
-    "build": "tsc dotenv/config index.ts",
+    "build": "tsc",
     "db:create": "sequelize-cli db:create",
     "db:migrate": "sequelize-cli db:migrate",
     "db:g:migration": "sequelize-cli migration:generate --name",
