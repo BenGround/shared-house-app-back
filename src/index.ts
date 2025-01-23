@@ -9,12 +9,12 @@ import { intializedSequelize } from './sequelize';
 const PORT = process.env.PORT || 3000;
 const app: express.Express = express();
 app.use(express.json());
-/*app.use(
+app.use(
   cors({
-    origin: 'http://172.20.10.4:3001',
+    origin: process.env['FRONT_URL'],
     credentials: true,
   }),
-);*/
+);
 
 app.use(json());
 
