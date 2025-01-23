@@ -4,7 +4,7 @@ import express, { json, Request, Response, urlencoded } from 'express';
 import cors from 'cors';
 import registerRoutes from './routes';
 import registerSession from './session';
-import { intializedSequelize } from './sequelize';
+import { initializedSequelize } from './sequelize';
 
 const PORT = process.env.PORT || 3000;
 const app: express.Express = express();
@@ -25,7 +25,7 @@ app.use(urlencoded({ extended: true }));
 //app.use(noSniff());
 //app.use(xssFilter());
 
-registerSession(app, intializedSequelize);
+registerSession(app, initializedSequelize);
 registerRoutes(app);
 
 app.use((req: Request, res: Response) => {

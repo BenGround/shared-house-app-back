@@ -4,8 +4,16 @@ import session from 'express-session';
 import { Sequelize as SequelizeTypescript } from 'sequelize-typescript';
 import { Pool } from 'pg';
 import connectPgSimple from 'connect-pg-simple';
-const { DEV_DATABASE_HOST, DEV_DATABASE_USERNAME, DEV_DATABASE_PASSWORD, DEV_DATABASE_NAME, SESSION_SECRET } =
-  process.env;
+import * as fs from 'fs';
+
+const {
+  DEV_DATABASE_HOST,
+  DEV_DATABASE_PORT,
+  DEV_DATABASE_USERNAME,
+  DEV_DATABASE_PASSWORD,
+  DEV_DATABASE_NAME,
+  SESSION_SECRET,
+} = process.env;
 
 dotenv.config();
 
@@ -23,7 +31,12 @@ export default (app: Application, sequelize: SequelizeTypescript): void => {
     password: DEV_DATABASE_PASSWORD,
     database: DEV_DATABASE_NAME,
     host: DEV_DATABASE_HOST,
+    port: parseInt(DEV_DATABASE_PORT ?? '5432'),
     dialect: 'postgres',
+    ssl: {
+      rejectUnauthorized: true,
+      ca: fs.readFileSync('./database/ca.pem').toString(),
+    },
   };
   const postgreStore = new PgSessionStore({
     pool: new Pool(poolConfigOpts),
