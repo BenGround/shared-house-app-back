@@ -12,13 +12,6 @@ module.exports = {
     host: DEV_DATABASE_HOST,
     port: parseInt(DEV_DATABASE_PORT ?? '5432'),
     dialect: 'postgres',
-    dialectOptions: {
-      ssl: {
-        require: true,
-        rejectUnauthorized: true,
-        ca: fs.existsSync('./database/ca.pem') ? fs.readFileSync('./database/ca.pem').toString() : undefined,
-      },
-    },
   },
   test: {
     username: 'root',

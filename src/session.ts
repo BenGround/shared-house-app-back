@@ -19,6 +19,7 @@ dotenv.config();
 
 export default (app: Application, sequelize: SequelizeTypescript): void => {
   const secret = SESSION_SECRET;
+  const isProduction = process.env.NODE_ENV === 'production';
 
   if (!secret) {
     throw new Error('SESSION_SECRET is missing from env!');
@@ -33,11 +34,16 @@ export default (app: Application, sequelize: SequelizeTypescript): void => {
     host: DEV_DATABASE_HOST,
     port: parseInt(DEV_DATABASE_PORT ?? '5432'),
     dialect: 'postgres',
-    ssl: {
+    ssl: {},
+  };
+
+  if (isProduction) {
+    poolConfigOpts.ssl = {
       rejectUnauthorized: true,
       ca: fs.readFileSync('./database/ca.pem').toString(),
-    },
-  };
+    };
+  }
+
   const postgreStore = new PgSessionStore({
     pool: new Pool(poolConfigOpts),
     createTableIfMissing: true,
@@ -46,10 +52,14 @@ export default (app: Application, sequelize: SequelizeTypescript): void => {
   app.use(
     session({
       store: postgreStore,
-      cookie: { maxAge: 30 * 24 * 60 * 60 * 1000 },
+      cookie: {
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+        sameSite: 'none',
+        secure: isProduction,
+      },
       secret,
-      resave: true,
-      saveUninitialized: true,
+      resave: false,
+      saveUninitialized: false,
     }),
   );
 };

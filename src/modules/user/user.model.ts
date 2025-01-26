@@ -3,6 +3,7 @@ import {
   BeforeCreate,
   BeforeUpdate,
   Column,
+  DataType,
   Default,
   HasMany,
   Model,
@@ -14,18 +15,26 @@ import { compare } from 'bcrypt';
 
 @Table
 export class User extends Model {
-  @Unique
-  @AllowNull(false)
-  @Column
-  username!: string;
+  @AllowNull(true)
+  @Column(DataType.STRING)
+  username: string | undefined = undefined;
 
   @AllowNull(false)
   @Column
   roomNumber!: number;
 
   @AllowNull(false)
+  @Default(false)
   @Column
-  email!: string;
+  isSet!: boolean;
+
+  @AllowNull(true)
+  @Column(DataType.STRING)
+  passwordToken: string | undefined = undefined;
+
+  @AllowNull(true)
+  @Column(DataType.STRING)
+  email: string | undefined = undefined;
 
   @AllowNull(false)
   @Column
@@ -42,11 +51,13 @@ export class User extends Model {
   @BeforeCreate
   @BeforeUpdate
   static beforeCreateHook(instance: User): void {
-    instance.username = instance.username.trim();
+    if (instance.dataValues.username) {
+      instance.username = instance.dataValues.username.trim();
+    }
   }
 
   comparePasswrod(password: string): Promise<boolean> {
-    return compare(password, this.password).catch((err) => {
+    return compare(password, this.dataValues.password).catch((err) => {
       console.error(err);
       return false;
     });

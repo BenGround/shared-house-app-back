@@ -1,5 +1,5 @@
 import { Application, Router } from 'express';
-import { checkSession, findByUsername, login, logout, register } from './user.controller';
+import { checkSession, createPassword, findByUsername, login, logout, register, sendEmail } from './user.controller';
 
 export default (app: Application): void => {
   const router = Router();
@@ -11,4 +11,6 @@ export default (app: Application): void => {
 
   app.use('/user', router);
   app.get('/session-status', checkSession);
+  app.get('/send-emails', sendEmail);
+  app.post('/create-password', createPassword);
 };

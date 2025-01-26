@@ -11,10 +11,12 @@ const app: express.Express = express();
 app.use(express.json());
 app.use(
   cors({
-    origin: process.env['FRONT_URL'],
+    origin: process.env.NODE_ENV === 'production' ? process.env.FRONT_URL : 'http://localhost:3001',
     credentials: true,
   }),
 );
+
+app.set('trust proxy', 1);
 
 app.use(json());
 
