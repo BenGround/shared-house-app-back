@@ -157,9 +157,9 @@ export const register = (req: Request<unknown, unknown, User>, res: Response): v
 
 export const update = async (req: Request, res: Response): Promise<void> => {
   const { username } = req.body;
-  const user = (req.session as UserSession).user;
+  const session = (req.session as UserSession).user;
 
-  if (!user) {
+  if (!session) {
     res.status(401).send({
       errorCode: 'user.unauthorized',
       message: 'User is not authenticated.',
@@ -175,14 +175,27 @@ export const update = async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
+  const validateUsername = (username: string): boolean => {
+    const usernameRegex = /^[a-zA-Z0-9\s_\u3040-\u30FF\u4E00-\u9FFF]{3,25}$/;
+    return usernameRegex.test(username);
+  };
+
+  if (!validateUsername(username)) {
+    res.status(400).send({
+      errorCode: 'user.username.invalid',
+      message:
+        'Username must be between 3 and 25 characters long and contain only letters, numbers, spaces, underscores, or Japanese characters.',
+    });
+    return;
+  }
+
   try {
-    await User.update({ username }, { where: { id: user.id } });
-    const session = (req.session as UserSession).user;
+    await User.update({ username }, { where: { id: session.id } });
     if (session) {
       session.username = username;
     }
 
-    res.status(200).send({
+    res.status(204).send({
       message: 'Username updated successfully.',
     });
   } catch (error) {
@@ -194,8 +207,22 @@ export const update = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
+const MAX_FILE_SIZE = 2 * 1024 * 1024;
+const ALLOWED_FILE_TYPES = ['image/png', 'image/jpeg', 'image/gif'];
+
 const storage = multer.memoryStorage();
-const upload = multer({ storage });
+
+const upload = multer({
+  storage,
+  limits: { fileSize: MAX_FILE_SIZE },
+  fileFilter: (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+    if (!ALLOWED_FILE_TYPES.includes(file.mimetype)) {
+      cb(new Error('Invalid file type. Only PNG, JPEG, and GIF are allowed.'));
+    } else {
+      cb(null, true);
+    }
+  },
+});
 
 export const updatePicture = async (req: Request, res: Response): Promise<void> => {
   if (!req.file) {
@@ -206,9 +233,9 @@ export const updatePicture = async (req: Request, res: Response): Promise<void> 
     return;
   }
 
-  const user = (req.session as UserSession).user;
+  const session = (req.session as UserSession).user;
 
-  if (!user) {
+  if (!session) {
     res.status(401).send({
       errorCode: 'user.unauthorized',
       message: 'User is not authenticated.',
@@ -219,14 +246,13 @@ export const updatePicture = async (req: Request, res: Response): Promise<void> 
   const profilePictureBuffer = req.file.buffer;
 
   try {
-    await User.update({ profilePicture: profilePictureBuffer }, { where: { id: user.id } });
-    const session = (req.session as UserSession).user;
+    await User.update({ profilePicture: profilePictureBuffer }, { where: { id: session.id } });
 
     if (session) {
       session.profilePicture = profilePictureBuffer;
     }
 
-    res.status(200).send({
+    res.status(204).send({
       message: 'Profile picture updated successfully.',
       profilePicture: `data:image/png;base64,${profilePictureBuffer.toString('base64')}`,
     });
@@ -235,6 +261,36 @@ export const updatePicture = async (req: Request, res: Response): Promise<void> 
     res.status(500).send({
       errorCode: 'user.update.picture.failed',
       message: 'Failed to update profile picture. Please try again later.',
+    });
+  }
+};
+
+export const deletePicture = async (req: Request, res: Response): Promise<void> => {
+  const session = (req.session as UserSession).user;
+
+  if (!session) {
+    res.status(401).send({
+      errorCode: 'user.unauthorized',
+      message: 'User is not authenticated.',
+    });
+    return;
+  }
+
+  try {
+    await User.update({ profilePicture: null }, { where: { id: session.id } });
+
+    if (session) {
+      session.profilePicture = undefined;
+    }
+
+    res.status(204).send({
+      message: 'Profile picture deleted successfully.',
+    });
+  } catch (error) {
+    console.error('Error updating profile picture:', error);
+    res.status(500).send({
+      errorCode: 'user.update.picture.failed',
+      message: 'Failed to detele profile picture. Please try again later.',
     });
   }
 };

@@ -10,6 +10,7 @@ import {
   updatePicture,
   sendEmail,
   uploadProfilePicture,
+  deletePicture,
 } from './user.controller';
 
 export default (app: Application): void => {
@@ -18,6 +19,7 @@ export default (app: Application): void => {
   router.post('/register', register);
   router.put('/update', update);
   router.put('/update/picture', uploadProfilePicture, updatePicture);
+  router.put('/delete/picture', deletePicture);
   router.post('/login', login);
   router.post('/logout', logout);
   router.get('/:username', findByUsername);

@@ -60,8 +60,9 @@ export default (app: Application, sequelize: SequelizeTypescript): void => {
     session({
       store: postgreStore,
       cookie: {
+        path: '/',
         maxAge: 30 * 24 * 60 * 60 * 1000,
-        sameSite: isProduction ? 'none' : 'lax',
+        sameSite: 'lax',
         secure: isProduction,
       },
       secret,
