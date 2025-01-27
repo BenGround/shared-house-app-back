@@ -48,6 +48,10 @@ export class User extends Model {
   @HasMany(() => Booking)
   bookings?: Booking[];
 
+  @AllowNull(true)
+  @Column(DataType.BLOB)
+  profilePicture?: Buffer | ArrayBuffer;
+
   @BeforeCreate
   @BeforeUpdate
   static beforeCreateHook(instance: User): void {
@@ -56,7 +60,7 @@ export class User extends Model {
     }
   }
 
-  comparePasswrod(password: string): Promise<boolean> {
+  comparePassword(password: string): Promise<boolean> {
     return compare(password, this.dataValues.password).catch((err) => {
       console.error(err);
       return false;

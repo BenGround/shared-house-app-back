@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 import { Application } from 'express';
 import session from 'express-session';
 import { Sequelize as SequelizeTypescript } from 'sequelize-typescript';
-import { Pool } from 'pg';
+import { Pool, PoolConfig } from 'pg';
 import connectPgSimple from 'connect-pg-simple';
 import * as fs from 'fs';
 
@@ -27,20 +27,27 @@ export default (app: Application, sequelize: SequelizeTypescript): void => {
 
   const PgSessionStore = connectPgSimple(session);
 
-  const poolConfigOpts = {
-    user: DEV_DATABASE_USERNAME,
-    password: DEV_DATABASE_PASSWORD,
-    database: DEV_DATABASE_NAME,
-    host: DEV_DATABASE_HOST,
-    port: parseInt(DEV_DATABASE_PORT ?? '5432'),
-    dialect: 'postgres',
-    ssl: {},
-  };
+  let poolConfigOpts: PoolConfig;
 
   if (isProduction) {
-    poolConfigOpts.ssl = {
-      rejectUnauthorized: true,
-      ca: fs.readFileSync('./database/ca.pem').toString(),
+    poolConfigOpts = {
+      user: DEV_DATABASE_USERNAME,
+      password: DEV_DATABASE_PASSWORD,
+      database: DEV_DATABASE_NAME,
+      host: DEV_DATABASE_HOST,
+      port: parseInt(DEV_DATABASE_PORT ?? '5432'),
+      ssl: {
+        rejectUnauthorized: true,
+        ca: fs.readFileSync('./database/ca.pem').toString(),
+      },
+    };
+  } else {
+    poolConfigOpts = {
+      user: DEV_DATABASE_USERNAME,
+      password: DEV_DATABASE_PASSWORD,
+      database: DEV_DATABASE_NAME,
+      host: DEV_DATABASE_HOST,
+      port: parseInt(DEV_DATABASE_PORT ?? '5432'),
     };
   }
 
@@ -54,7 +61,7 @@ export default (app: Application, sequelize: SequelizeTypescript): void => {
       store: postgreStore,
       cookie: {
         maxAge: 30 * 24 * 60 * 60 * 1000,
-        sameSite: 'none',
+        sameSite: isProduction ? 'none' : 'lax',
         secure: isProduction,
       },
       secret,

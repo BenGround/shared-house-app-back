@@ -5,6 +5,7 @@ import { SharedSpace } from '../sharedSpace/sharedspace.model';
 import { UserSession } from '../../types';
 import moment from 'moment-timezone';
 import { User } from '../user/user.model';
+import { getBufferImage } from './../../utils/imageUtils';
 
 export const create = async (req: Request<unknown, unknown, Booking>, res: Response): Promise<void> => {
   const { sharedSpaceId, startDate, endDate } = req.body;
@@ -110,10 +111,14 @@ export const create = async (req: Request<unknown, unknown, Booking>, res: Respo
           sharedSpaceId,
         }).save();
 
+        const user = (req.session as UserSession).user;
         res.status(201).send({
           message: 'Booking created successfully!',
           booking: {
             ...booking.toJSON(),
+            username: user?.username,
+            picture: getBufferImage(user?.profilePicture),
+            roomNumber: user?.roomNumber,
             startDate: start.toISOString(),
             endDate: end.toISOString(),
           },
@@ -183,18 +188,23 @@ export const findAllBySharePlaceId = (req: Request, res: Response): void => {
     include: [
       {
         model: User,
-        attributes: ['username', 'roomNumber'],
+        attributes: ['username', 'roomNumber', 'profilePicture'],
       },
     ],
   })
     .then((bookings: Booking[]) => {
-      const formattedBookings = bookings.map((booking) => ({
-        id: booking.id,
-        username: booking.getDataValue('user').dataValues.username,
-        roomNumber: booking.getDataValue('user').dataValues.roomNumber,
-        startDate: moment.utc(booking.dataValues.startDate).tz('Asia/Tokyo').format('YYYY-MM-DD HH:mm:ss'),
-        endDate: moment.utc(booking.dataValues.endDate).tz('Asia/Tokyo').format('YYYY-MM-DD HH:mm:ss'),
-      }));
+      const formattedBookings = bookings.map((booking) => {
+        const user = booking.getDataValue('user').dataValues;
+
+        return {
+          id: booking.id,
+          username: user.username,
+          roomNumber: user.roomNumber,
+          picture: getBufferImage(user.profilePicture),
+          startDate: moment.utc(booking.dataValues.startDate).tz('Asia/Tokyo').format('YYYY-MM-DD HH:mm:ss'),
+          endDate: moment.utc(booking.dataValues.endDate).tz('Asia/Tokyo').format('YYYY-MM-DD HH:mm:ss'),
+        };
+      });
 
       res.send(formattedBookings);
     })
