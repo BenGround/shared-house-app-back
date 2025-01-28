@@ -6,7 +6,7 @@ import registerRoutes from './routes';
 import registerSession from './session';
 import { initializedSequelize } from './sequelize';
 
-const PORT = process.env.PORT || 3000;
+const port = Number(process.env.PORT) || 3000; 
 const app: express.Express = express();
 app.use(express.json());
 app.use(
@@ -34,6 +34,6 @@ app.use((req: Request, res: Response) => {
   res.status(404).send('Route not found');
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${process.env.PORT}`);
+app.listen(port, '0.0.0.0', () => {
+  console.log(`Server running on http://localhost:${port}`);
 });
