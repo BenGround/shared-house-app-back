@@ -10,17 +10,25 @@ module.exports = {
         type: Sequelize.INTEGER,
       },
       username: {
+        allowNull: true,
+        type: Sequelize.STRING,
+      },
+      roomNumber: {
         allowNull: false,
         type: Sequelize.STRING,
         unique: true,
       },
-      roomNumber: {
-        allowNull: false,
-        type: Sequelize.INTEGER,
-        unique: true,
-      },
       email: {
+        allowNull: true,
+        type: Sequelize.STRING,
+      },
+      isSet: {
         allowNull: false,
+        type: Sequelize.BOOLEAN,
+        defaultValue: false,
+      },
+      passwordToken: {
+        allowNull: true,
         type: Sequelize.STRING,
       },
       password: {
@@ -31,6 +39,10 @@ module.exports = {
         allowNull: false,
         defaultValue: false,
         type: Sequelize.BOOLEAN,
+      },
+      profilePicture: {
+        allowNull: true,
+        type: Sequelize.BLOB,
       },
       createdAt: {
         allowNull: false,

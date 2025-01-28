@@ -3,24 +3,31 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    return await queryInterface.bulkInsert('Users', [
+    const users = [
       {
-        username: 'Josh',
-        roomNumber: '001',
-        email: 'josh@mail.com',
-        password: '$2b$08$L72YV9/UhKEr0S/f9VNjhODdC6hVEvuhF3ygyogNUeZW9PRkvDzRS',
+        username: 'admin',
+        roomNumber: '000',
+        password: 'noPasswordYet',
         createdAt: new Date(),
         updatedAt: new Date(),
       },
-      {
-        username: 'Jeanne',
-        roomNumber: '002',
-        email: 'jeanne@mail.com',
-        password: '$2b$08$L72YV9/UhKEr0S/f9VNjhODdC6hVEvuhF3ygyogNUeZW9PRkvDzRS',
+    ];
+
+    const getUser = (paddedNumber) => {
+      return {
+        roomNumber: paddedNumber,
+        password: 'noPasswordYet',
         createdAt: new Date(),
         updatedAt: new Date(),
-      },
-    ]);
+      };
+    };
+
+    for (let i = 1; i <= 299; i++) {
+      const paddedNumber = i.toString().padStart(3, '0');
+      users.push(getUser(paddedNumber));
+    }
+
+    return await queryInterface.bulkInsert('Users', users);
   },
 
   async down(queryInterface, Sequelize) {

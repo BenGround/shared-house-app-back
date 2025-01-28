@@ -52,10 +52,11 @@ export const list = (req: Request, res: Response): void => {
     .then((sharedSpaces: SharedSpace[] | null) => {
       res.send(sharedSpaces);
     })
-    .catch(() => {
+    .catch((error) => {
       res.status(500).send({
         errorCode: 'sharedspace',
         message: 'Error retrieving shared spaces',
+        error: error,
       });
     });
 };

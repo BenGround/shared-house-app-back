@@ -5,6 +5,7 @@ import { SharedSpace } from '../sharedSpace/sharedspace.model';
 import { UserSession } from '../../types';
 import moment from 'moment-timezone';
 import { User } from '../user/user.model';
+import { getBufferImage } from './../../utils/imageUtils';
 
 export const create = async (req: Request<unknown, unknown, Booking>, res: Response): Promise<void> => {
   const { sharedSpaceId, startDate, endDate } = req.body;
@@ -33,23 +34,25 @@ export const create = async (req: Request<unknown, unknown, Booking>, res: Respo
       return;
     }
 
+    const { id, maxBookingHours, startDayTime, endDayTime, maxBookingByUser } = sharedSpace.dataValues;
+
     const hourDiff = (end.getTime() - start.getTime()) / 1000 / 60 / 60;
-    if (hourDiff <= 0 || hourDiff > sharedSpace.maxBookingHours) {
+    if (hourDiff <= 0 || hourDiff > maxBookingHours) {
       res.status(400).send({
         errorCode: 'booking.duration.wrong',
-        message: `The booking duration must be less than ${sharedSpace.maxBookingHours} hours and greater than 0!`,
+        message: `The booking duration must be less than ${maxBookingHours} hours and greater than 0!`,
       });
       return;
     }
 
-    const [startDayTimeHours, startDayTimeMinutes] = sharedSpace.startDayTime.split(':').map(Number);
+    const [startDayTimeHours, startDayTimeMinutes] = startDayTime.split(':').map(Number);
     const startTimeSharedSpace = moment.utc(start).set({
       hour: startDayTimeHours,
       minute: startDayTimeMinutes,
       second: 0,
     });
 
-    const [endDayTimeHours, endDayTimeMinutes] = sharedSpace.endDayTime.split(':').map(Number);
+    const [endDayTimeHours, endDayTimeMinutes] = endDayTime.split(':').map(Number);
     const endTimeSharedSpace = moment.utc(end).set({
       hour: endDayTimeHours,
       minute: endDayTimeMinutes,
@@ -77,11 +80,9 @@ export const create = async (req: Request<unknown, unknown, Booking>, res: Respo
       return;
     }
 
-    const maxBookings = sharedSpace.maxBookingByUser;
-
     Booking.findAll({
       where: {
-        sharedSpaceId: sharedSpace.id,
+        sharedSpaceId: id,
         userId: (req.session as UserSession).user?.id,
         endDate: {
           [Op.gte]: moment(new Date().toISOString()).toDate(),
@@ -95,7 +96,7 @@ export const create = async (req: Request<unknown, unknown, Booking>, res: Respo
       ],
     })
       .then(async (bookings: Booking[]) => {
-        if (bookings.length >= maxBookings) {
+        if (bookings.length >= maxBookingByUser) {
           res.status(500).send({
             errorCode: 'booking.too.many',
             message: 'You have done too many bookings',
@@ -110,10 +111,14 @@ export const create = async (req: Request<unknown, unknown, Booking>, res: Respo
           sharedSpaceId,
         }).save();
 
+        const user = (req.session as UserSession).user;
         res.status(201).send({
           message: 'Booking created successfully!',
           booking: {
             ...booking.toJSON(),
+            username: user?.username,
+            picture: getBufferImage(user?.profilePicture),
+            roomNumber: user?.roomNumber,
             startDate: start.toISOString(),
             endDate: end.toISOString(),
           },
@@ -183,24 +188,30 @@ export const findAllBySharePlaceId = (req: Request, res: Response): void => {
     include: [
       {
         model: User,
-        attributes: ['username'],
+        attributes: ['username', 'roomNumber', 'profilePicture'],
       },
     ],
   })
     .then((bookings: Booking[]) => {
-      const formattedBookings = bookings.map((booking) => ({
-        id: booking.id,
-        username: booking.user.username,
-        startDate: moment.utc(booking.startDate).tz('Asia/Tokyo').format('YYYY-MM-DD HH:mm:ss'),
-        endDate: moment.utc(booking.endDate).tz('Asia/Tokyo').format('YYYY-MM-DD HH:mm:ss'),
-      }));
+      const formattedBookings = bookings.map((booking) => {
+        const user = booking.getDataValue('user').dataValues;
+
+        return {
+          id: booking.id,
+          username: user.username,
+          roomNumber: user.roomNumber,
+          picture: getBufferImage(user.profilePicture),
+          startDate: moment.utc(booking.dataValues.startDate).tz('Asia/Tokyo').format('YYYY-MM-DD HH:mm:ss'),
+          endDate: moment.utc(booking.dataValues.endDate).tz('Asia/Tokyo').format('YYYY-MM-DD HH:mm:ss'),
+        };
+      });
 
       res.send(formattedBookings);
     })
-    .catch(() => {
+    .catch((error: any) => {
       res.status(500).send({
         errorCode: 'booking',
-        message: `Error retrieving bookings`,
+        message: `Error retrieving bookings ${error}`,
       });
     });
 };
@@ -224,22 +235,16 @@ export const getNumberBookingsByUser = (req: Request, res: Response): void => {
         [Op.gte]: moment(new Date().toISOString()).toDate(),
       },
     },
-    include: [
-      {
-        model: User,
-        attributes: ['username'],
-      },
-    ],
   })
     .then((bookings: Booking[]) => {
       res.send({
         count: bookings.length,
       });
     })
-    .catch(() => {
+    .catch((error: any) => {
       res.status(500).send({
         errorCode: 'booking',
-        message: `Error retrieving bookings`,
+        message: `Error retrieving bookings ${error}`,
       });
     });
 };
@@ -265,7 +270,7 @@ export const deleteBooking = (req: Request, res: Response): void => {
         return;
       }
 
-      if (booking.userId !== (req.session as UserSession).user?.id) {
+      if (booking.dataValues.userId !== (req.session as UserSession).user?.id) {
         res.status(403).send({
           errorCode: 'booking.not.allowed.delete',
           message: 'You are not allowed to delete this booking!',

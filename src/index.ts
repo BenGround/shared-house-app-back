@@ -4,17 +4,19 @@ import express, { json, Request, Response, urlencoded } from 'express';
 import cors from 'cors';
 import registerRoutes from './routes';
 import registerSession from './session';
-import { intializedSequelize } from './sequelize';
+import { initializedSequelize } from './sequelize';
 
 const PORT = process.env.PORT || 3000;
 const app: express.Express = express();
 app.use(express.json());
-/*app.use(
+app.use(
   cors({
-    origin: 'http://172.20.10.4:3001',
+    origin: process.env.NODE_ENV === 'production' ? process.env.FRONT_URL : 'http://localhost:3001',
     credentials: true,
   }),
-);*/
+);
+
+app.set('trust proxy', 1);
 
 app.use(json());
 
@@ -25,7 +27,7 @@ app.use(urlencoded({ extended: true }));
 //app.use(noSniff());
 //app.use(xssFilter());
 
-registerSession(app, intializedSequelize);
+registerSession(app, initializedSequelize);
 registerRoutes(app);
 
 app.use((req: Request, res: Response) => {
