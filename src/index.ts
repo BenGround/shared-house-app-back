@@ -6,12 +6,12 @@ import registerRoutes from './routes';
 import registerSession from './session';
 import { initializedSequelize } from './sequelize';
 
-const port = Number(process.env.PORT) || 3000; 
+const port = Number(process.env.PORT) || 3000;
 const app: express.Express = express();
 app.use(express.json());
 app.use(
   cors({
-    origin: process.env.NODE_ENV === 'production' ? process.env.FRONT_URL : 'http://localhost:3001',
+    origin: process.env.FRONT_URL,
     credentials: true,
   }),
 );
