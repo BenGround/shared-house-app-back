@@ -13,7 +13,7 @@ const app: express.Express = express();
 app.use(express.json());
 app.use(
   cors({
-    origin: process.env.FRONT_URL,
+    origin: 'http://35.76.31.130',
     credentials: true,
   }),
 );
@@ -21,7 +21,7 @@ app.use(
 const server = http.createServer(app);
 const io = new SocketIOServer(server, {
   cors: {
-    origin: process.env.FRONT_URL,
+    origin: 'http://35.76.31.130',
     methods: ['GET', 'POST'],
     credentials: true,
   },
