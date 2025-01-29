@@ -1,4 +1,4 @@
-FROM node:23.5
+FROM node:23.5-alpline
 
 WORKDIR /usr/src/app
 
