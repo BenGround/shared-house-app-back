@@ -4,6 +4,8 @@ import express, { json, Request, Response, urlencoded } from 'express';
 import cors from 'cors';
 import registerRoutes from './routes';
 import registerSession from './session';
+import http from 'http';
+import { Server as SocketIOServer } from 'socket.io';
 import { initializedSequelize } from './sequelize';
 
 const port = Number(process.env.PORT) || 3000;
@@ -11,10 +13,19 @@ const app: express.Express = express();
 app.use(express.json());
 app.use(
   cors({
-    origin: process.env.FRONT_URL,
+    origin: 'https://social-residence-shakujiikoen.online',
     credentials: true,
   }),
 );
+
+const server = http.createServer(app);
+const io = new SocketIOServer(server, {
+  cors: {
+    origin: 'https://social-residence-shakujiikoen.online',
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
+});
 
 app.set('trust proxy', 1);
 
@@ -34,6 +45,8 @@ app.use((req: Request, res: Response) => {
   res.status(404).send('Route not found');
 });
 
-app.listen(port, '0.0.0.0', () => {
+server.listen(port, '0.0.0.0', () => {
   console.log(`Server running on http://localhost:${port}`);
 });
+
+export { io };

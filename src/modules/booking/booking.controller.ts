@@ -6,6 +6,7 @@ import { UserSession } from '../../types';
 import moment from 'moment-timezone';
 import { User } from '../user/user.model';
 import { getBufferImage } from './../../utils/imageUtils';
+import { io } from '../../index';
 
 export const create = async (req: Request<unknown, unknown, Booking>, res: Response): Promise<void> => {
   const { sharedSpaceId, startDate, endDate } = req.body;
@@ -23,6 +24,15 @@ export const create = async (req: Request<unknown, unknown, Booking>, res: Respo
 
   const start = moment(startDate).utc().toDate();
   const end = moment(endDate).utc().toDate();
+  const now = new Date();
+
+  if (start < now) {
+    res.status(404).send({
+      errorCode: 'bookings.cannotBookInPast',
+      message: "You can't book in the past!",
+    });
+    return;
+  }
 
   try {
     const sharedSpace = await SharedSpace.findOne({ where: { id: sharedSpaceId } });
@@ -112,6 +122,14 @@ export const create = async (req: Request<unknown, unknown, Booking>, res: Respo
         }).save();
 
         const user = (req.session as UserSession).user;
+        io.emit('newBooking', {
+          ...booking.toJSON(),
+          username: user?.username,
+          picture: getBufferImage(user?.profilePicture),
+          roomNumber: user?.roomNumber,
+          startDate: moment.utc(start).tz('Asia/Tokyo').format('YYYY-MM-DD HH:mm:ss'),
+          endDate: moment.utc(end).tz('Asia/Tokyo').format('YYYY-MM-DD HH:mm:ss'),
+        });
         res.status(201).send({
           message: 'Booking created successfully!',
           booking: {
@@ -122,6 +140,173 @@ export const create = async (req: Request<unknown, unknown, Booking>, res: Respo
             startDate: start.toISOString(),
             endDate: end.toISOString(),
           },
+        });
+      })
+      .catch(() => {
+        res.status(500).send({
+          errorCode: 'booking',
+          message: `Error retrieving bookings`,
+        });
+      });
+  } catch (error) {
+    res.status(500).send({
+      errorCode: 'booking',
+      message: 'Error during booking: ' + error,
+    });
+  }
+};
+
+export const update = async (req: Request, res: Response): Promise<void> => {
+  const { bookingId, startDate, endDate } = req.body;
+  const userId = (req.session as UserSession).user?.id;
+
+  if (!userId) {
+    res.status(400).send({ errorCode: 'user.not.logged', message: 'You are not logged in!' });
+    return;
+  }
+
+  if (!bookingId || !startDate || !endDate) {
+    res.status(400).send({ errorCode: 'data.missing', message: 'Missing data!' });
+    return;
+  }
+
+  const start = moment(startDate).utc().toDate();
+  const end = moment(endDate).utc().toDate();
+  const now = new Date();
+
+  try {
+    const booking = await Booking.findOne({
+      where: { id: bookingId },
+      include: [
+        {
+          model: SharedSpace,
+          attributes: ['maxBookingHours', 'startDayTime', 'endDayTime', 'maxBookingByUser'],
+        },
+        {
+          model: User,
+          attributes: ['username', 'roomNumber', 'profilePicture'],
+        },
+      ],
+    });
+
+    if (!booking) {
+      res.status(404).send({
+        errorCode: 'booking.not.existing',
+        message: "The booking you're trying to update does not exist!",
+      });
+      return;
+    }
+
+    if (booking.dataValues.userId !== userId) {
+      res.status(404).send({
+        errorCode: 'booking.other.user',
+        message: 'You can only update your bookings!',
+      });
+      return;
+    }
+
+    if (booking.dataValues.startDate < now) {
+      res.status(400).send({
+        errorCode: 'bookings.cannotUpdatePastBookings',
+        message: `Cannot update past bookings!`,
+      });
+      return;
+    }
+
+    if (start < now) {
+      res.status(404).send({
+        errorCode: 'bookings.cannotBookInPast',
+        message: "You can't book in the past!",
+      });
+      return;
+    }
+
+    const { maxBookingHours, startDayTime, endDayTime, maxBookingByUser } = booking.dataValues.sharedSpace.dataValues;
+
+    const hourDiff = (end.getTime() - start.getTime()) / 1000 / 60 / 60;
+    if (hourDiff <= 0 || hourDiff > maxBookingHours) {
+      res.status(400).send({
+        errorCode: 'booking.duration.wrong',
+        message: `The booking duration must be less than ${maxBookingHours} hours and greater than 0!`,
+      });
+      return;
+    }
+
+    const [startDayTimeHours, startDayTimeMinutes] = startDayTime.split(':').map(Number);
+    const startTimeSharedSpace = moment.utc(start).set({
+      hour: startDayTimeHours,
+      minute: startDayTimeMinutes,
+      second: 0,
+    });
+
+    const [endDayTimeHours, endDayTimeMinutes] = endDayTime.split(':').map(Number);
+    const endTimeSharedSpace = moment.utc(end).set({
+      hour: endDayTimeHours,
+      minute: endDayTimeMinutes,
+      second: 0,
+    });
+
+    if (startDate < startTimeSharedSpace.toDate() || endDate > endTimeSharedSpace.toDate()) {
+      res.status(400).send({
+        errorCode: 'booking.outside.workinghours',
+        message: "Please do a booking inside the shared space's working hours!",
+      });
+      return;
+    }
+
+    const overlappingBooking = await Booking.findOne({
+      where: {
+        [Op.and]: [
+          { startDate: { [Op.lt]: end } },
+          { endDate: { [Op.gt]: start } },
+          { id: { [Op.not]: bookingId } },
+          { sharedSpaceId: booking.dataValues.sharedSpaceId },
+        ],
+      },
+    });
+
+    if (overlappingBooking) {
+      res
+        .status(409)
+        .send({ errorCode: 'booking.already.existing', message: 'There is already a booking for this time slot!' });
+      return;
+    }
+
+    Booking.findAll({
+      where: {
+        sharedSpaceId: booking.dataValues.sharedSpaceId,
+        userId: (req.session as UserSession).user?.id,
+        endDate: {
+          [Op.gte]: moment(new Date().toISOString()).toDate(),
+        },
+      },
+    })
+      .then(async (bookings: Booking[]) => {
+        if (bookings.length - 1 >= maxBookingByUser) {
+          res.status(500).send({
+            errorCode: 'booking.too.many',
+            message: 'You have done too many bookings',
+          });
+          return;
+        }
+
+        await Booking.update(
+          { startDate: moment.utc(start).toLocaleString(), endDate: moment.utc(end).toLocaleString() },
+          { where: { id: bookingId } },
+        );
+
+        const { username, profilePicture, roomNumber } = booking.dataValues.user.dataValues;
+        io.emit('updatedBooking', {
+          ...booking.toJSON(),
+          username: username,
+          picture: getBufferImage(profilePicture),
+          roomNumber: roomNumber,
+          startDate: moment.utc(start).tz('Asia/Tokyo').format('YYYY-MM-DD HH:mm:ss'),
+          endDate: moment.utc(end).tz('Asia/Tokyo').format('YYYY-MM-DD HH:mm:ss'),
+        });
+
+        res.status(204).send({
+          message: 'Booking updated successfully!',
         });
       })
       .catch(() => {
@@ -260,7 +445,14 @@ export const deleteBooking = (req: Request, res: Response): void => {
     return;
   }
 
-  Booking.findByPk(id)
+  Booking.findByPk(id, {
+    include: [
+      {
+        model: User,
+        attributes: ['roomNumber'],
+      },
+    ],
+  })
     .then((booking) => {
       if (!booking) {
         res.status(404).send({
@@ -279,6 +471,8 @@ export const deleteBooking = (req: Request, res: Response): void => {
       }
 
       booking.destroy().then(() => {
+        const roomNumber = booking.dataValues.user.dataValues.roomNumber;
+        io.emit('deletedBooking', { ...booking.toJSON(), roomNumber });
         res.status(204).send({ message: 'Successfully deleted booking!' });
       });
     })

@@ -328,7 +328,7 @@ export const login = (req: Request<unknown, unknown, User>, res: Response): void
 
       res.status(200).send({
         status: true,
-        user: frontUserInfo(user),
+        user: frontUserInfo(user.dataValues),
       });
     })
     .catch(() => {

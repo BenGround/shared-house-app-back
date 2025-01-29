@@ -1,5 +1,5 @@
 import { Application, Router } from 'express';
-import { create, findAllBySharePlaceId, deleteBooking, getNumberBookingsByUser } from './booking.controller';
+import { create, findAllBySharePlaceId, deleteBooking, getNumberBookingsByUser, update } from './booking.controller';
 
 export default (app: Application): void => {
   const router = Router();
@@ -8,6 +8,7 @@ export default (app: Application): void => {
   router.get('/:id', findAllBySharePlaceId);
   router.get('/number/:id', getNumberBookingsByUser);
   router.delete('/:id', deleteBooking);
+  router.put('/update', update);
 
   app.use('/bookings', router);
 };
