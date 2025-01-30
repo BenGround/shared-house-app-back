@@ -7,24 +7,25 @@ module.exports = {
       {
         username: 'admin',
         roomNumber: '000',
-        password: 'noPasswordYet',
+        password: '$2b$08$mpsMS/4iXC7/5g9lqyh/..DRrf6oqz98rCohdOmA7QYpn8GEXVm/y',
         createdAt: new Date(),
         updatedAt: new Date(),
+        isAdmin: true,
       },
     ];
 
-    const getUser = (paddedNumber) => {
+    const getUser = (roomNumber) => {
       return {
-        roomNumber: paddedNumber,
-        password: 'noPasswordYet',
+        roomNumber,
+        password: 'NO_PASSWORD_YET',
+        isAdmin: false,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
     };
 
-    for (let i = 1; i <= 299; i++) {
-      const paddedNumber = i.toString().padStart(3, '0');
-      users.push(getUser(paddedNumber));
+    for (let i = 101; i <= 299; i++) {
+      users.push(getUser(i));
     }
 
     return await queryInterface.bulkInsert('Users', users);

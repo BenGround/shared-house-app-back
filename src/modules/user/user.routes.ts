@@ -7,14 +7,14 @@ import {
   logout,
   register,
   update,
-  updatePicture,
-  uploadProfilePicture,
   deletePicture,
   adminGetUsers,
   adminUpdateUser,
   adminSendPasswordEmail,
   adminCreateUser,
   adminDeleteUser,
+  uploadImage,
+  uploadProfilePicture,
 } from './user.controller';
 import checkUserConnection from '../../middlewares/checkUserConnection';
 import checkAdmin from '../../middlewares/checkAdmin';
@@ -23,7 +23,7 @@ export default (app: Application): void => {
   const userRouter = Router();
   userRouter.post('/register', register);
   userRouter.put('/update', checkUserConnection, update);
-  userRouter.put('/update/picture', checkUserConnection, uploadProfilePicture, updatePicture);
+  userRouter.put('/update/picture', checkUserConnection, uploadProfilePicture, uploadImage);
   userRouter.put('/delete/picture', checkUserConnection, deletePicture);
   userRouter.post('/logout', checkUserConnection, logout);
   userRouter.get('/:username', checkUserConnection, findByUsername);

@@ -49,8 +49,8 @@ export class User extends Model {
   bookings?: Booking[];
 
   @AllowNull(true)
-  @Column(DataType.BLOB)
-  profilePicture?: Buffer | ArrayBuffer;
+  @Column(DataType.STRING)
+  profilePicture?: String;
 
   @BeforeCreate
   @BeforeUpdate

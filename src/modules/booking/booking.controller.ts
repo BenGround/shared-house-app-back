@@ -5,7 +5,7 @@ import { SharedSpace } from '../sharedSpace/sharedspace.model';
 import { UserSession } from '../../types';
 import moment from 'moment-timezone';
 import { User } from '../user/user.model';
-import { getBufferImage } from './../../utils/imageUtils';
+import { getUrlImg } from './../../utils/imageUtils';
 import { io } from '../../index';
 
 export const create = async (req: Request<unknown, unknown, Booking>, res: Response): Promise<void> => {
@@ -113,7 +113,7 @@ export const create = async (req: Request<unknown, unknown, Booking>, res: Respo
         io.emit('newBooking', {
           ...booking.toJSON(),
           username: session.username,
-          picture: getBufferImage(session.profilePicture),
+          picture: getUrlImg(session.profilePicture),
           roomNumber: session.roomNumber,
           startDate: moment.utc(start).tz('Asia/Tokyo').format('YYYY-MM-DD HH:mm:ss'),
           endDate: moment.utc(end).tz('Asia/Tokyo').format('YYYY-MM-DD HH:mm:ss'),
@@ -123,7 +123,7 @@ export const create = async (req: Request<unknown, unknown, Booking>, res: Respo
           booking: {
             ...booking.toJSON(),
             username: session.username,
-            picture: getBufferImage(session.profilePicture),
+            picture: getUrlImg(session.profilePicture),
             roomNumber: session.roomNumber,
             startDate: start.toISOString(),
             endDate: end.toISOString(),
@@ -282,7 +282,7 @@ export const update = async (req: Request, res: Response): Promise<void> => {
         io.emit('updatedBooking', {
           ...booking.toJSON(),
           username: username,
-          picture: getBufferImage(profilePicture),
+          picture: getUrlImg(profilePicture),
           roomNumber: roomNumber,
           startDate: moment.utc(start).tz('Asia/Tokyo').format('YYYY-MM-DD HH:mm:ss'),
           endDate: moment.utc(end).tz('Asia/Tokyo').format('YYYY-MM-DD HH:mm:ss'),
@@ -368,7 +368,7 @@ export const findAllBySharePlaceId = (req: Request, res: Response): void => {
           id: booking.id,
           username: user.username,
           roomNumber: user.roomNumber,
-          picture: getBufferImage(user.profilePicture),
+          picture: getUrlImg(user.profilePicture),
           startDate: moment.utc(booking.dataValues.startDate).tz('Asia/Tokyo').format('YYYY-MM-DD HH:mm:ss'),
           endDate: moment.utc(booking.dataValues.endDate).tz('Asia/Tokyo').format('YYYY-MM-DD HH:mm:ss'),
         };

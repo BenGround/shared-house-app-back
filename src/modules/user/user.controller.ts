@@ -6,15 +6,15 @@ import { User } from './user.model';
 import dotenv from 'dotenv';
 import crypto from 'crypto';
 import multer from 'multer';
-import { getBufferImage } from './../../utils/imageUtils';
+import { getUrlImg } from './../../utils/imageUtils';
+import { v4 as uuidv4 } from 'uuid';
+import { getMinioClient } from './../../utils/minioClient';
 
 dotenv.config();
 const SibApiV3Sdk = require('sib-api-v3-sdk');
-
 const client = SibApiV3Sdk.ApiClient.instance;
 const apiKey = client.authentications['api-key'];
 apiKey.apiKey = process.env.BREVO_API_KEY;
-
 const emailApi = new SibApiV3Sdk.TransactionalEmailsApi();
 
 const frontUserInfo = (user: User, forAdmin: boolean = false) => {
@@ -22,7 +22,7 @@ const frontUserInfo = (user: User, forAdmin: boolean = false) => {
     username: user.username || null,
     roomNumber: user.roomNumber,
     email: user.email,
-    profilePicture: user.profilePicture ? getBufferImage(user.profilePicture) : null,
+    profilePicture: user.profilePicture ? getUrlImg(user.profilePicture) : null,
     isAdmin: Boolean(user.isAdmin),
   };
 
@@ -36,6 +36,118 @@ const frontUserInfo = (user: User, forAdmin: boolean = false) => {
 
 const generateResetToken = (): string => {
   return crypto.randomBytes(20).toString('hex');
+};
+
+const MAX_FILE_SIZE = 2 * 1024 * 1024;
+const ALLOWED_FILE_TYPES = ['image/png', 'image/jpeg', 'image/gif'];
+
+const storage = multer.memoryStorage();
+
+const upload = multer({
+  storage,
+  limits: { fileSize: MAX_FILE_SIZE },
+  fileFilter: (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+    if (!ALLOWED_FILE_TYPES.includes(file.mimetype)) {
+      cb(new Error('Invalid file type. Only PNG, JPEG, and GIF are allowed.'));
+    } else {
+      cb(null, true);
+    }
+  },
+});
+
+export const uploadProfilePicture = upload.single('profilePicture');
+export const uploadImage = async (req: Request, res: Response): Promise<void> => {
+  if (!req.file) {
+    res.status(400).send('No file uploaded');
+    return;
+  }
+  const bucketName = process.env.MINIO_BUCKET;
+
+  if (!bucketName) {
+    res.status(500).send({ errorCode: 'errors.occured' });
+    return;
+  }
+
+  const minioClient = getMinioClient();
+  const session = req.user;
+  const uniqueToken = uuidv4();
+  const fileExtension = req.file.originalname.split('.').pop();
+  const objectName = `images/${uniqueToken}.${fileExtension}`;
+
+  if (session.profilePicture) {
+    try {
+      await minioClient.removeObject(bucketName, session.profilePicture);
+    } catch (minioError) {
+      console.error('Error deleting image from MinIO:', minioError);
+    }
+  }
+
+  minioClient.putObject(
+    bucketName,
+    objectName,
+    req.file.buffer,
+    req.file.size,
+    async (err: Error | null, etag: string | undefined) => {
+      if (err) {
+        res.status(500).send(`Error uploading file: ${err.message}`);
+        return;
+      }
+
+      try {
+        await User.update({ profilePicture: objectName }, { where: { id: session.id } });
+
+        if (session) {
+          session.profilePicture = objectName;
+        }
+
+        res.status(200).send({
+          message: 'Profile picture updated successfully.',
+          profilePicture: getUrlImg(objectName),
+        });
+      } catch (error) {
+        console.error('Error updating profile picture:', error);
+        res.status(500).send({
+          errorCode: 'user.update.picture.failed',
+          message: 'Failed to update profile picture. Please try again later.',
+        });
+      }
+    },
+  );
+};
+export const deletePicture = async (req: Request, res: Response): Promise<void> => {
+  const session = req.user;
+  const bucketName = process.env.MINIO_BUCKET;
+
+  if (!session?.profilePicture) {
+    res.status(400).json({
+      errorCode: 'user.picture.not_found',
+      message: 'No profile picture to delete.',
+    });
+    return;
+  }
+
+  if (!bucketName) {
+    res.status(500).send({ errorCode: 'errors.occured' });
+    return;
+  }
+
+  try {
+    await User.update({ profilePicture: null }, { where: { id: session.id } });
+
+    await getMinioClient().removeObject(bucketName, session.profilePicture);
+
+    session.profilePicture = undefined;
+
+    res.status(204).json({
+      message: 'Profile picture deleted successfully.',
+    });
+  } catch (dbError) {
+    console.error('Error updating profile picture in database:', dbError);
+    res.status(500).json({
+      errorCode: 'user.update.picture.failed',
+      message: 'Failed to delete profile picture. Please try again later.',
+    });
+  }
 };
 
 export const createPassword = async (req: Request, res: Response): Promise<void> => {
@@ -157,80 +269,6 @@ export const update = async (req: Request, res: Response): Promise<void> => {
     });
   }
 };
-
-const MAX_FILE_SIZE = 2 * 1024 * 1024;
-const ALLOWED_FILE_TYPES = ['image/png', 'image/jpeg', 'image/gif'];
-
-const storage = multer.memoryStorage();
-
-const upload = multer({
-  storage,
-  limits: { fileSize: MAX_FILE_SIZE },
-  fileFilter: (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-    if (!ALLOWED_FILE_TYPES.includes(file.mimetype)) {
-      cb(new Error('Invalid file type. Only PNG, JPEG, and GIF are allowed.'));
-    } else {
-      cb(null, true);
-    }
-  },
-});
-
-export const updatePicture = async (req: Request, res: Response): Promise<void> => {
-  const session = req.user;
-
-  if (!req.file) {
-    res.status(400).send({
-      errorCode: 'file.missing',
-      message: 'No file uploaded.',
-    });
-    return;
-  }
-
-  const profilePictureBuffer = req.file.buffer;
-
-  try {
-    await User.update({ profilePicture: profilePictureBuffer }, { where: { id: session.id } });
-
-    if (session) {
-      session.profilePicture = profilePictureBuffer;
-    }
-
-    res.status(200).send({
-      message: 'Profile picture updated successfully.',
-      profilePicture: `data:image/png;base64,${profilePictureBuffer.toString('base64')}`,
-    });
-  } catch (error) {
-    console.error('Error updating profile picture:', error);
-    res.status(500).send({
-      errorCode: 'user.update.picture.failed',
-      message: 'Failed to update profile picture. Please try again later.',
-    });
-  }
-};
-
-export const deletePicture = async (req: Request, res: Response): Promise<void> => {
-  const session = req.user;
-
-  try {
-    await User.update({ profilePicture: null }, { where: { id: session.id } });
-
-    if (session) {
-      session.profilePicture = undefined;
-    }
-
-    res.status(204).send({
-      message: 'Profile picture deleted successfully.',
-    });
-  } catch (error) {
-    console.error('Error updating profile picture:', error);
-    res.status(500).send({
-      errorCode: 'user.update.picture.failed',
-      message: 'Failed to detele profile picture. Please try again later.',
-    });
-  }
-};
-
-export const uploadProfilePicture = upload.single('profilePicture');
 
 export const login = (req: Request<unknown, unknown, User>, res: Response): void => {
   const { roomNumber, password } = req.body;

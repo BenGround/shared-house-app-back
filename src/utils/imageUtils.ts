@@ -1,12 +1,8 @@
-export function getBufferImage(profilePicture: Buffer | ArrayBuffer | undefined): string | null {
-  if (profilePicture) {
-    let profilePictureBuffer = profilePicture;
-    //TODO better condition
-    if (!(profilePictureBuffer instanceof Buffer)) {
-      profilePictureBuffer = Buffer.from(profilePictureBuffer as ArrayBuffer);
-    }
-    return `data:image/png;base64,${profilePictureBuffer.toString('base64')}`;
-  } else {
-    return null;
-  }
+import dotenv from 'dotenv';
+dotenv.config();
+export function getUrlImg(profilePicture: String | undefined): String | null {
+  const minioUrl = process.env.MINIO_URL;
+  const bucketName = process.env.MINIO_BUCKET;
+
+  return minioUrl && profilePicture && bucketName ? `${minioUrl}/${bucketName}/${profilePicture}` : null;
 }
