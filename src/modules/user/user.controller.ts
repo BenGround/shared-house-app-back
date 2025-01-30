@@ -157,15 +157,7 @@ export const register = (req: Request<unknown, unknown, User>, res: Response): v
 
 export const update = async (req: Request, res: Response): Promise<void> => {
   const { username } = req.body;
-  const session = (req.session as UserSession).user;
-
-  if (!session) {
-    res.status(401).send({
-      errorCode: 'user.unauthorized',
-      message: 'User is not authenticated.',
-    });
-    return;
-  }
+  const session = req.user;
 
   if (!username) {
     res.status(400).send({
@@ -225,20 +217,12 @@ const upload = multer({
 });
 
 export const updatePicture = async (req: Request, res: Response): Promise<void> => {
+  const session = req.user;
+
   if (!req.file) {
     res.status(400).send({
       errorCode: 'file.missing',
       message: 'No file uploaded.',
-    });
-    return;
-  }
-
-  const session = (req.session as UserSession).user;
-
-  if (!session) {
-    res.status(401).send({
-      errorCode: 'user.unauthorized',
-      message: 'User is not authenticated.',
     });
     return;
   }
@@ -252,7 +236,7 @@ export const updatePicture = async (req: Request, res: Response): Promise<void> 
       session.profilePicture = profilePictureBuffer;
     }
 
-    res.status(204).send({
+    res.status(200).send({
       message: 'Profile picture updated successfully.',
       profilePicture: `data:image/png;base64,${profilePictureBuffer.toString('base64')}`,
     });
@@ -266,15 +250,7 @@ export const updatePicture = async (req: Request, res: Response): Promise<void> 
 };
 
 export const deletePicture = async (req: Request, res: Response): Promise<void> => {
-  const session = (req.session as UserSession).user;
-
-  if (!session) {
-    res.status(401).send({
-      errorCode: 'user.unauthorized',
-      message: 'User is not authenticated.',
-    });
-    return;
-  }
+  const session = req.user;
 
   try {
     await User.update({ profilePicture: null }, { where: { id: session.id } });
@@ -376,7 +352,7 @@ export const findByUsername = (req: Request, res: Response): void => {
     return;
   }
 
-  if ((req.session as UserSession).user?.dataValues.username !== username) {
+  if (req.user.username !== username) {
     res.status(400).send({
       errorCode: 'forbidden',
       message: 'Forbidden!',

@@ -10,12 +10,7 @@ import { io } from '../../index';
 
 export const create = async (req: Request<unknown, unknown, Booking>, res: Response): Promise<void> => {
   const { sharedSpaceId, startDate, endDate } = req.body;
-  const userId = (req.session as UserSession).user?.id;
-
-  if (!userId) {
-    res.status(400).send({ errorCode: 'user.not.logged', message: 'You are not logged in!' });
-    return;
-  }
+  const session = req.user;
 
   if (!sharedSpaceId || !startDate || !endDate) {
     res.status(400).send({ errorCode: 'data.missing', message: 'Missing data!' });
@@ -93,17 +88,11 @@ export const create = async (req: Request<unknown, unknown, Booking>, res: Respo
     Booking.findAll({
       where: {
         sharedSpaceId: id,
-        userId: (req.session as UserSession).user?.id,
+        userId: session.id,
         endDate: {
           [Op.gte]: moment(new Date().toISOString()).toDate(),
         },
       },
-      include: [
-        {
-          model: User,
-          attributes: ['username'],
-        },
-      ],
     })
       .then(async (bookings: Booking[]) => {
         if (bookings.length >= maxBookingByUser) {
@@ -117,16 +106,15 @@ export const create = async (req: Request<unknown, unknown, Booking>, res: Respo
         const booking = await new Booking({
           startDate: moment.utc(start).toLocaleString(),
           endDate: moment.utc(end).toLocaleString(),
-          userId,
+          userId: session.id,
           sharedSpaceId,
         }).save();
 
-        const user = (req.session as UserSession).user;
         io.emit('newBooking', {
           ...booking.toJSON(),
-          username: user?.username,
-          picture: getBufferImage(user?.profilePicture),
-          roomNumber: user?.roomNumber,
+          username: session.username,
+          picture: getBufferImage(session.profilePicture),
+          roomNumber: session.roomNumber,
           startDate: moment.utc(start).tz('Asia/Tokyo').format('YYYY-MM-DD HH:mm:ss'),
           endDate: moment.utc(end).tz('Asia/Tokyo').format('YYYY-MM-DD HH:mm:ss'),
         });
@@ -134,9 +122,9 @@ export const create = async (req: Request<unknown, unknown, Booking>, res: Respo
           message: 'Booking created successfully!',
           booking: {
             ...booking.toJSON(),
-            username: user?.username,
-            picture: getBufferImage(user?.profilePicture),
-            roomNumber: user?.roomNumber,
+            username: session.username,
+            picture: getBufferImage(session.profilePicture),
+            roomNumber: session.roomNumber,
             startDate: start.toISOString(),
             endDate: end.toISOString(),
           },
@@ -158,12 +146,7 @@ export const create = async (req: Request<unknown, unknown, Booking>, res: Respo
 
 export const update = async (req: Request, res: Response): Promise<void> => {
   const { bookingId, startDate, endDate } = req.body;
-  const userId = (req.session as UserSession).user?.id;
-
-  if (!userId) {
-    res.status(400).send({ errorCode: 'user.not.logged', message: 'You are not logged in!' });
-    return;
-  }
+  const session = req.user;
 
   if (!bookingId || !startDate || !endDate) {
     res.status(400).send({ errorCode: 'data.missing', message: 'Missing data!' });
@@ -197,7 +180,7 @@ export const update = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    if (booking.dataValues.userId !== userId) {
+    if (booking.dataValues.userId !== session.id) {
       res.status(404).send({
         errorCode: 'booking.other.user',
         message: 'You can only update your bookings!',
@@ -275,7 +258,7 @@ export const update = async (req: Request, res: Response): Promise<void> => {
     Booking.findAll({
       where: {
         sharedSpaceId: booking.dataValues.sharedSpaceId,
-        userId: (req.session as UserSession).user?.id,
+        userId: session.id,
         endDate: {
           [Op.gte]: moment(new Date().toISOString()).toDate(),
         },
@@ -415,7 +398,7 @@ export const getNumberBookingsByUser = (req: Request, res: Response): void => {
   Booking.findAll({
     where: {
       sharedSpaceId: id,
-      userId: (req.session as UserSession).user?.id,
+      userId: req.user.id,
       endDate: {
         [Op.gte]: moment(new Date().toISOString()).toDate(),
       },
@@ -445,7 +428,8 @@ export const deleteBooking = (req: Request, res: Response): void => {
     return;
   }
 
-  Booking.findByPk(id, {
+  Booking.findOne({
+    where: { id, userId: req.user.id },
     include: [
       {
         model: User,
