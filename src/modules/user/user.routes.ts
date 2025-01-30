@@ -8,25 +8,39 @@ import {
   register,
   update,
   updatePicture,
-  sendEmail,
   uploadProfilePicture,
   deletePicture,
+  adminGetUsers,
+  adminUpdateUser,
+  adminSendPasswordEmail,
+  adminCreateUser,
+  adminDeleteUser,
 } from './user.controller';
 import checkUserConnection from '../../middlewares/checkUserConnection';
+import checkAdmin from '../../middlewares/checkAdmin';
 
 export default (app: Application): void => {
-  const router = Router();
+  const userRouter = Router();
+  userRouter.post('/register', register);
+  userRouter.put('/update', checkUserConnection, update);
+  userRouter.put('/update/picture', checkUserConnection, uploadProfilePicture, updatePicture);
+  userRouter.put('/delete/picture', checkUserConnection, deletePicture);
+  userRouter.post('/logout', checkUserConnection, logout);
+  userRouter.get('/:username', checkUserConnection, findByUsername);
+  userRouter.post('/login', login);
 
-  router.post('/register', register);
-  router.put('/update', checkUserConnection, update);
-  router.put('/update/picture', checkUserConnection, uploadProfilePicture, updatePicture);
-  router.put('/delete/picture', checkUserConnection, deletePicture);
-  router.post('/logout', checkUserConnection, logout);
-  router.get('/:username', checkUserConnection, findByUsername);
-  router.post('/login', login);
+  app.use('/user', userRouter);
 
-  app.use('/user', router);
+  const adminRouter = Router();
+  adminRouter.use(checkUserConnection, checkAdmin);
+  adminRouter.get('/getUsers', adminGetUsers);
+  adminRouter.put('/user', adminUpdateUser);
+  adminRouter.get('/sendPasswordEmail/:id', adminSendPasswordEmail);
+  adminRouter.post('/user', adminCreateUser);
+  adminRouter.delete('/user', adminDeleteUser);
+
+  app.use('/admin', adminRouter);
+
   app.get('/session-status', checkUserConnection, checkSession);
-  app.get('/send-emails', sendEmail);
   app.post('/create-password', createPassword);
 };

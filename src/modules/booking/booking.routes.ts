@@ -5,12 +5,12 @@ import checkUserConnection from '../../middlewares/checkUserConnection';
 export default (app: Application): void => {
   const router = Router();
 
+  router.use(checkUserConnection);
   router.get('/:id', findAllBySharePlaceId);
-
-  router.post('/create', checkUserConnection, create);
-  router.put('/update', checkUserConnection, update);
-  router.delete('/:id', checkUserConnection, deleteBooking);
-  router.get('/number/:id', checkUserConnection, getNumberBookingsByUser);
+  router.post('/create', create);
+  router.put('/update', update);
+  router.delete('/:id', deleteBooking);
+  router.get('/number/:id', getNumberBookingsByUser);
 
   app.use('/bookings', router);
 };

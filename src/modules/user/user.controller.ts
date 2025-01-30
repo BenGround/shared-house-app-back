@@ -1,6 +1,6 @@
 import { hash } from 'bcrypt';
 import { Request, Response } from 'express';
-import { SequelizeScopeError } from 'sequelize';
+import { Op, SequelizeScopeError } from 'sequelize';
 import { UserSession } from '../../types';
 import { User } from './user.model';
 import dotenv from 'dotenv';
@@ -17,62 +17,21 @@ apiKey.apiKey = process.env.BREVO_API_KEY;
 
 const emailApi = new SibApiV3Sdk.TransactionalEmailsApi();
 
-const frontUserInfo = (user: User) => {
-  return {
+const frontUserInfo = (user: User, forAdmin: boolean = false) => {
+  const userInfos: Record<string, any> = {
     username: user.username || null,
     roomNumber: user.roomNumber,
     email: user.email,
     profilePicture: user.profilePicture ? getBufferImage(user.profilePicture) : null,
+    isAdmin: Boolean(user.isAdmin),
   };
-};
 
-export const sendEmail = (req: Request, res: Response): void => {
-  User.findAll({ where: { isSet: false } })
-    .then((users: User[]) => {
-      users.forEach(async (user) => {
-        const to = user.get('email');
-        if (to) {
-          const token = generateResetToken();
-          const subject = 'Password Create Request';
-          const text = 'Please click the link below to create your password.';
-          const html = `
-            <p>Click the link below to create your password: ${process.env.FRONT_URL}/create-password?token=${token}</p>
-          `;
+  if (forAdmin) {
+    userInfos.isSet = user.isSet;
+    userInfos.id = user.id;
+  }
 
-          const sender = {
-            email: process.env.EMAIL_USER,
-          };
-
-          const receivers = [{ email: to }];
-
-          const emailParams = {
-            sender,
-            to: receivers,
-            subject,
-            textContent: text,
-            htmlContent: html,
-          };
-
-          try {
-            await emailApi.sendTransacEmail(emailParams);
-            await User.update({ isSet: true, passwordToken: token }, { where: { id: user.id } });
-          } catch (error: any) {
-            console.error('Failed to send email:', error);
-            res.status(500).send({ errorCode: 'email.failed', message: 'Failed to send email.' });
-            return;
-          }
-        }
-      });
-    })
-    .catch((error) => {
-      console.error('Error fetching users:', error);
-      res.status(500).send({
-        errorCode: 'user.not.found',
-        message: 'No users found or error occurred.',
-      });
-    });
-
-  res.send();
+  return userInfos;
 };
 
 const generateResetToken = (): string => {
@@ -370,4 +329,143 @@ export const findByUsername = (req: Request, res: Response): void => {
         message: `Error retrieving user with username=${username}`,
       });
     });
+};
+
+export const adminGetUsers = (req: Request, res: Response): void => {
+  User.findAll()
+    .then((users: User[] | null) => {
+      res.send(users?.map((user) => frontUserInfo(user.dataValues, true)));
+    })
+    .catch(() => {
+      res.status(500).send({
+        errorCode: 'users.retrieving',
+        message: `Error retrieving users`,
+      });
+    });
+};
+
+export const adminUpdateUser = async (req: Request, res: Response): Promise<void> => {
+  const { id, username, email, isAdmin } = req.body;
+
+  if (typeof isAdmin !== 'boolean') {
+    res.status(400).send({
+      errorCode: 'data.missing',
+      message: 'Missing data!',
+    });
+    return;
+  }
+
+  try {
+    await User.update({ username, email, isAdmin }, { where: { id } });
+    res.status(204).send();
+  } catch (error: any) {
+    res.status(500).send({ errorCode: 'user.update', message: 'Failed to update User!' + error });
+  }
+};
+
+export const adminSendPasswordEmail = async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
+
+  User.findByPk(id)
+    .then(async (user: User | null) => {
+      if (!user) throw new Error('User not found');
+
+      const to = user.dataValues.email;
+
+      if (to) {
+        const token = generateResetToken();
+        const subject = 'Password Create Request';
+        const text = 'Please click the link below to create your password.';
+        const html = `
+            <p>Click the link below to create your password: ${process.env.FRONT_URL}/create-password?token=${token}</p>
+          `;
+
+        const sender = {
+          email: process.env.EMAIL_USER,
+        };
+
+        const receivers = [{ email: to }];
+
+        const emailParams = {
+          sender,
+          to: receivers,
+          subject,
+          textContent: text,
+          htmlContent: html,
+        };
+
+        try {
+          await emailApi.sendTransacEmail(emailParams);
+          await User.update({ passwordToken: token }, { where: { id: user.id } });
+          res.status(200).send();
+        } catch (error: any) {
+          console.error('Failed to send email:', error);
+          res.status(500).send({ errorCode: 'errors.occured', message: 'Failed to send email.' });
+          return;
+        }
+      }
+    })
+    .catch(() => {
+      res.status(500).send({
+        errorCode: 'user.not.found',
+        message: `Error retrieving user with id=${id}`,
+      });
+    });
+};
+
+export const adminCreateUser = async (req: Request, res: Response): Promise<void> => {
+  const { username, email, roomNumber, isAdmin } = req.body;
+
+  if (!roomNumber || typeof isAdmin !== 'boolean') {
+    res.status(400).send({
+      errorCode: 'data.missing',
+      message: 'Missing data!',
+    });
+    return;
+  }
+
+  try {
+    const foundUser = await User.findAll({ where: { roomNumber } });
+
+    if (foundUser) {
+      res.status(500).send({ errorCode: 'user.room.number.already.exist', message: 'Failed to create User!' });
+      return;
+    }
+
+    const user = await User.create({ username, email, roomNumber, isAdmin, password: 'PASSWORD_NOT_SET' });
+    res.status(201).send(user);
+  } catch (error: any) {
+    res.status(500).send({ errorCode: 'user.create', message: 'Failed to create User!' + error });
+  }
+};
+
+export const adminDeleteUser = async (req: Request, res: Response): Promise<void> => {
+  if (!req.user.isAdmin) {
+    res.status(400).send({
+      errorCode: 'not.admin',
+      message: 'You are not admin!',
+    });
+    return;
+  }
+
+  const { roomNumbers } = req.body;
+
+  if (!roomNumbers) {
+    res.status(400).send({
+      errorCode: 'data.missing',
+      message: 'Missing data!',
+    });
+    return;
+  }
+
+  try {
+    await User.destroy({
+      where: {
+        roomNumber: { [Op.in]: roomNumbers },
+      },
+    });
+    res.status(200).send();
+  } catch (error: any) {
+    res.status(500).send({ errorCode: 'users.delete', message: 'Failed to delete User(s)!' + error });
+  }
 };
