@@ -478,14 +478,6 @@ export const adminCreateUser = async (req: Request, res: Response): Promise<void
 };
 
 export const adminDeleteUser = async (req: Request, res: Response): Promise<void> => {
-  if (!req.user.isAdmin) {
-    res.status(400).send({
-      errorCode: 'not.admin',
-      message: 'You are not admin!',
-    });
-    return;
-  }
-
   const { roomNumbers } = req.body;
 
   if (!roomNumbers) {

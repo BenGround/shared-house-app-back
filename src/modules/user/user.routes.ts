@@ -41,6 +41,6 @@ export default (app: Application): void => {
 
   app.use('/admin', adminRouter);
 
-  app.get('/session-status', checkUserConnection, checkSession);
+  app.get('/session-status', checkSession);
   app.post('/create-password', createPassword);
 };

@@ -1,13 +1,27 @@
 import { Application, Router } from 'express';
-import { create, destroy, findById, list } from './sharedSpace.controller';
+import {
+  adminCreateSharedspace,
+  adminDeleteSharedspaces,
+  adminUpdateSharedspace,
+  findById,
+  list,
+} from './sharedSpace.controller';
+import checkUserConnection from './../../middlewares/checkUserConnection';
+import checkAdmin from './../../middlewares/checkAdmin';
 
 export default (app: Application): void => {
   const router = Router();
-
-  router.post('/create', create);
+  router.use(checkUserConnection);
   router.get('/list', list);
   router.get('/:id', findById);
-  router.delete('/:id', destroy);
 
   app.use('/sharedspace', router);
+
+  const adminRouter = Router();
+  adminRouter.use(checkUserConnection, checkAdmin);
+  adminRouter.put('/sharedspace', adminUpdateSharedspace);
+  adminRouter.post('/sharedspace', adminCreateSharedspace);
+  adminRouter.delete('/sharedspace', adminDeleteSharedspaces);
+
+  app.use('/admin', adminRouter);
 };
