@@ -93,7 +93,7 @@ export const createPassword = async (req: Request, res: Response): Promise<void>
 
     await user.update({ passwordToken: null, password: hashPassword });
 
-    res.send({ message: 'Password successfully updated', roomNumber: user.roomNumber });
+    res.send({ message: 'Password successfully updated', roomNumber: user.dataValues.roomNumber });
   } catch (error) {
     console.error('Error creating password:', error);
     return sendErrorResponse(res, 400, 'user.save.failed', 'Failed to update the password. Please try again later');
