@@ -1,20 +1,20 @@
 import { Request, Response, NextFunction } from 'express';
 import { User } from '../modules/user/user.model';
+import { sendErrorResponse } from '../utils/errorUtils';
+import { checkingSession } from '../modules/user/user.helper';
 
 interface AuthenticatedRequest extends Request {
   user?: User;
 }
 
-const checkUserConnection = (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
-  if (!req.session?.user) {
-    res.status(401).json({
-      errorCode: 'user-not-logged',
-      message: 'User is not authenticated',
-    });
-    return;
+const checkUserConnection = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  const error = await checkingSession(req);
+
+  if (error) {
+    return sendErrorResponse(res, error.status, error.code, error.message);
   }
 
-  req.user = req.session.user;
+  req.user = req.session.user.dataValues;
   next();
 };
 

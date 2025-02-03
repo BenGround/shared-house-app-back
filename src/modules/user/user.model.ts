@@ -25,7 +25,7 @@ export class User extends Model {
   @AllowNull(false)
   @Default(false)
   @Column
-  isSet!: boolean;
+  isActive!: boolean;
 
   @AllowNull(true)
   @Column(DataType.STRING)

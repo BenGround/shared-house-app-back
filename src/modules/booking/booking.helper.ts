@@ -93,7 +93,7 @@ export const createOrUpdateBooking = async (req: Request, res: Response, isUpdat
       return sendErrorResponse(
         res,
         400,
-        'booking.invalid.duration',
+        'booking.outside.workinghours',
         `Booking duration must be between 1 and ${maxBookingHours} hours!`,
       );
     }

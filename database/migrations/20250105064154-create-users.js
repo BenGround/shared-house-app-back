@@ -22,7 +22,7 @@ module.exports = {
         allowNull: true,
         type: Sequelize.STRING,
       },
-      isSet: {
+      isActive: {
         allowNull: false,
         type: Sequelize.BOOLEAN,
         defaultValue: false,

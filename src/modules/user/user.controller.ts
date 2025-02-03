@@ -8,7 +8,7 @@ import { getUrlImg, removeFileToMinio, upload, uploadFileToMinio } from './../..
 import { v4 as uuidv4 } from 'uuid';
 import { getMinioClient } from './../../utils/minioClient';
 import { sendErrorResponse } from '../../utils/errorUtils';
-import { frontUserInfo, generateResetToken, validateRequiredFields } from './user.helper';
+import { checkingSession, frontUserInfo, generateResetToken, validateRequiredFields } from './user.helper';
 import { emailApi } from '../../utils/emailUtils';
 
 dotenv.config();
@@ -100,27 +100,6 @@ export const createPassword = async (req: Request, res: Response): Promise<void>
   }
 };
 
-export const register = async (req: Request<unknown, unknown, User>, res: Response): Promise<void> => {
-  const { username, roomNumber, password, email, isAdmin } = req.body;
-
-  if (!validateRequiredFields(['username', 'roomNumber', 'password', 'email'], req.body, res)) return;
-
-  try {
-    const foundUser = await User.findOne({ where: { roomNumber } });
-    if (foundUser) throw new Error('An user already exists! Try to log in or choose another room number.');
-
-    const passwordHash = await hash(password, 8);
-
-    const newUser = await User.create({ username, roomNumber, password: passwordHash, email, isAdmin });
-
-    (req.session as UserSession).user = newUser;
-
-    res.status(201).send();
-  } catch (err) {
-    return sendErrorResponse(res, 500, 'user.save.failed', 'Some error occurred while creating the user');
-  }
-};
-
 export const update = async (req: Request, res: Response): Promise<void> => {
   const { username } = req.body;
   const session = req.user;
@@ -159,6 +138,8 @@ export const login = async (req: Request<unknown, unknown, User>, res: Response)
     const isMatchingPassword = await user.comparePassword(password);
     if (!isMatchingPassword) return sendErrorResponse(res, 400, 'user.password.not.match', "Passwords don't match");
 
+    if (!user.dataValues.isActive) return sendErrorResponse(res, 400, 'user.not.active', 'User not activated');
+
     (req.session as UserSession).user = user;
 
     res.status(200).send({ status: true, user: frontUserInfo(user.dataValues) });
@@ -167,15 +148,15 @@ export const login = async (req: Request<unknown, unknown, User>, res: Response)
   }
 };
 
-export const checkSession = (req: Request, res: Response): void => {
+export const checkSession = async (req: Request, res: Response): Promise<void> => {
   const user = (req.session as UserSession).user;
+  const error = await checkingSession(req);
 
-  if (user) {
-    res.status(200).send({ loggedIn: true, user: frontUserInfo(user) });
-    return;
+  if (error) {
+    return sendErrorResponse(res, error.status, error.code, error.message);
   }
 
-  res.status(200).send({ loggedIn: false });
+  res.status(200).send({ loggedIn: true, user: frontUserInfo(user) });
 };
 
 export const logout = (req: Request, res: Response): void => {
@@ -217,14 +198,14 @@ export const adminGetUsers = (req: Request, res: Response): void => {
 };
 
 export const adminUpdateUser = async (req: Request, res: Response): Promise<void> => {
-  const { id, username, email, isAdmin } = req.body;
+  const { id, username, email, isAdmin, isActive } = req.body;
 
-  if (typeof isAdmin !== 'boolean') {
+  if (typeof isAdmin !== 'boolean' || typeof isActive !== 'boolean' || !email) {
     return sendErrorResponse(res, 400, 'data.missing', 'Missing or invalid id param!');
   }
 
   try {
-    await User.update({ username, email, isAdmin }, { where: { id } });
+    await User.update({ username, email, isAdmin, isActive }, { where: { id } });
     res.status(204).send();
   } catch (error) {
     console.error('Error updating user:', error);
@@ -267,9 +248,9 @@ export const adminSendPasswordEmail = async (req: Request, res: Response): Promi
 };
 
 export const adminCreateUser = async (req: Request, res: Response): Promise<void> => {
-  const { username, email, roomNumber, isAdmin } = req.body;
+  const { username, email, roomNumber, isAdmin, isActive } = req.body;
 
-  if (!roomNumber || typeof isAdmin !== 'boolean') {
+  if (!roomNumber || !email || typeof isAdmin !== 'boolean' || typeof isActive !== 'boolean') {
     return sendErrorResponse(res, 400, 'data.missing', 'Missing required parameters!');
   }
 
@@ -285,6 +266,7 @@ export const adminCreateUser = async (req: Request, res: Response): Promise<void
       email,
       roomNumber,
       isAdmin,
+      isActive,
       password: 'PASSWORD_NOT_SET',
     });
 

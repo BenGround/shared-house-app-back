@@ -8,9 +8,10 @@ module.exports = {
         username: 'admin',
         roomNumber: '000',
         password: '$2b$08$mpsMS/4iXC7/5g9lqyh/..DRrf6oqz98rCohdOmA7QYpn8GEXVm/y',
+        isAdmin: true,
+        isActive: true,
         createdAt: new Date(),
         updatedAt: new Date(),
-        isAdmin: true,
       },
     ];
 
@@ -19,6 +20,7 @@ module.exports = {
         roomNumber,
         password: 'PASSWORD_NOT_SET',
         isAdmin: false,
+        isActive: false,
         createdAt: new Date(),
         updatedAt: new Date(),
       };

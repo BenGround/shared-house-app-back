@@ -5,7 +5,6 @@ import {
   findByUsername,
   login,
   logout,
-  register,
   update,
   deletePicture,
   adminGetUsers,
@@ -20,14 +19,17 @@ import checkUserConnection from '../../middlewares/checkUserConnection';
 import checkAdmin from '../../middlewares/checkAdmin';
 
 export default (app: Application): void => {
+  app.post('/user/login', login);
+  app.get('/user/session-status', checkSession);
+  app.post('/user/create-password', createPassword);
+  app.post('/user/logout', logout);
+
   const userRouter = Router();
-  userRouter.post('/register', register);
-  userRouter.put('/update', checkUserConnection, update);
-  userRouter.put('/update/picture', checkUserConnection, uploadProfilePicture, uploadImage);
-  userRouter.put('/delete/picture', checkUserConnection, deletePicture);
-  userRouter.post('/logout', checkUserConnection, logout);
-  userRouter.get('/:username', checkUserConnection, findByUsername);
-  userRouter.post('/login', login);
+  userRouter.use(checkUserConnection);
+  userRouter.put('/update', update);
+  userRouter.put('/update/picture', uploadProfilePicture, uploadImage);
+  userRouter.put('/delete/picture', deletePicture);
+  userRouter.get('/:username', findByUsername);
 
   app.use('/user', userRouter);
 
@@ -40,7 +42,4 @@ export default (app: Application): void => {
   adminRouter.delete('/user', adminDeleteUser);
 
   app.use('/admin', adminRouter);
-
-  app.get('/session-status', checkSession);
-  app.post('/create-password', createPassword);
 };
