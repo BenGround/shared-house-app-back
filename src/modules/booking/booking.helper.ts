@@ -66,13 +66,19 @@ export const createOrUpdateBooking = async (req: Request, res: Response, isUpdat
     let booking: Booking | null = null;
 
     if (isUpdate) {
-      booking = await Booking.findOne({ where: { id: bookingId }, include: [SharedSpace, User] });
+      booking = await Booking.findOne({
+        where: { id: bookingId },
+        include: [{ model: User, attributes: ['username', 'profilePicture', 'roomNumber'] }],
+      });
       if (!booking || booking.dataValues.userId !== session.id) {
         return sendErrorResponse(res, 403, 'booking.unauthorized', 'Unauthorized or booking not found!');
       }
     }
 
-    const sharedSpace = await SharedSpace.findOne({ where: { id: sharedSpaceId } });
+    const sharedId = isUpdate ? booking?.dataValues?.sharedSpaceId : sharedSpaceId;
+    const sharedSpace = await SharedSpace.findOne({
+      where: { id: sharedId },
+    });
     if (!sharedSpace) {
       return sendErrorResponse(res, 404, 'sharespace.not.existing', 'Shared space not found!');
     }
@@ -125,7 +131,16 @@ export const createOrUpdateBooking = async (req: Request, res: Response, isUpdat
 
     if (isUpdate) {
       await booking!.update({ startDate: start.toISOString(), endDate: end.toISOString() });
-      io.emit('updatedBooking', { ...booking!.toJSON(), username: session.username });
+      const { username, picture, roomNumber } = booking?.dataValues?.user?.dataValues;
+      io.emit('updatedBooking', {
+        id: booking?.dataValues?.id,
+        username: username,
+        picture: getUrlImg(picture),
+        roomNumber: roomNumber,
+        startDate: start.toISOString(),
+        endDate: end.toISOString(),
+        sharedSpaceId: sharedId,
+      });
     } else {
       booking = await Booking.create({
         startDate: start.toISOString(),
@@ -133,7 +148,15 @@ export const createOrUpdateBooking = async (req: Request, res: Response, isUpdat
         userId: session.id,
         sharedSpaceId,
       });
-      io.emit('newBooking', { ...booking.toJSON(), username: session.username });
+      io.emit('newBooking', {
+        id: booking?.dataValues?.id,
+        username: session.username,
+        picture: getUrlImg(session.profilePicture),
+        roomNumber: session.roomNumber,
+        startDate: start.toISOString(),
+        endDate: end.toISOString(),
+        sharedSpaceId: sharedId,
+      });
     }
 
     res.status(isUpdate ? 200 : 201).json({
