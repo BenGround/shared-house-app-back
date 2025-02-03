@@ -17,7 +17,7 @@ module.exports = {
     const getUser = (roomNumber) => {
       return {
         roomNumber,
-        password: 'NO_PASSWORD_YET',
+        password: 'PASSWORD_NOT_SET',
         isAdmin: false,
         createdAt: new Date(),
         updatedAt: new Date(),

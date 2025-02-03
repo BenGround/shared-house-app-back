@@ -8,7 +8,6 @@ import {
   HasMany,
   Model,
   Table,
-  Unique,
 } from 'sequelize-typescript';
 import { Booking } from '../booking/booking.model';
 import { compare } from 'bcrypt';

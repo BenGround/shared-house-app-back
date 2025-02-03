@@ -6,14 +6,8 @@ import { Pool, PoolConfig } from 'pg';
 import connectPgSimple from 'connect-pg-simple';
 import * as fs from 'fs';
 
-const {
-  DEV_DATABASE_HOST,
-  DEV_DATABASE_PORT,
-  DEV_DATABASE_USERNAME,
-  DEV_DATABASE_PASSWORD,
-  DEV_DATABASE_NAME,
-  SESSION_SECRET,
-} = process.env;
+const { DATABASE_HOST, DATABASE_PORT, DATABASE_USERNAME, DATABASE_PASSWORD, DATABASE_NAME, SESSION_SECRET } =
+  process.env;
 
 dotenv.config();
 
@@ -31,11 +25,11 @@ export default (app: Application, sequelize: SequelizeTypescript): void => {
 
   if (isProduction) {
     poolConfigOpts = {
-      user: DEV_DATABASE_USERNAME,
-      password: DEV_DATABASE_PASSWORD,
-      database: DEV_DATABASE_NAME,
-      host: DEV_DATABASE_HOST,
-      port: parseInt(DEV_DATABASE_PORT ?? '5432'),
+      user: DATABASE_USERNAME,
+      password: DATABASE_PASSWORD,
+      database: DATABASE_NAME,
+      host: DATABASE_HOST,
+      port: parseInt(DATABASE_PORT ?? '5432'),
       ssl: {
         rejectUnauthorized: true,
         ca: fs.readFileSync('./database/ca.pem').toString(),
@@ -43,11 +37,11 @@ export default (app: Application, sequelize: SequelizeTypescript): void => {
     };
   } else {
     poolConfigOpts = {
-      user: DEV_DATABASE_USERNAME,
-      password: DEV_DATABASE_PASSWORD,
-      database: DEV_DATABASE_NAME,
-      host: DEV_DATABASE_HOST,
-      port: parseInt(DEV_DATABASE_PORT ?? '5432'),
+      user: DATABASE_USERNAME,
+      password: DATABASE_PASSWORD,
+      database: DATABASE_NAME,
+      host: DATABASE_HOST,
+      port: parseInt(DATABASE_PORT ?? '5432'),
     };
   }
 

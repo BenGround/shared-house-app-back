@@ -10,23 +10,16 @@ dotenv.config();
 let sequelize: Sequelize;
 
 const initializeSequelize = () => {
-  const {
-    NODE_ENV,
-    DEV_DATABASE_HOST,
-    DEV_DATABASE_NAME,
-    DEV_DATABASE_USERNAME,
-    DEV_DATABASE_PASSWORD,
-    DEV_DATABASE_PORT,
-  } = process.env;
+  const { NODE_ENV, DATABASE_HOST, DATABASE_NAME, DATABASE_USERNAME, DATABASE_PASSWORD, DATABASE_PORT } = process.env;
 
-  if (!DEV_DATABASE_HOST || !DEV_DATABASE_NAME || !DEV_DATABASE_USERNAME) {
+  if (!DATABASE_HOST || !DATABASE_NAME || !DATABASE_USERNAME) {
     throw new Error('Missing DB configuration in env');
   }
 
   if (!sequelize) {
     const sequelizeConfigs = {
-      host: DEV_DATABASE_HOST,
-      port: parseInt(DEV_DATABASE_PORT ?? '5432'),
+      host: DATABASE_HOST,
+      port: parseInt(DATABASE_PORT ?? '5432'),
       dialect: 'postgres',
       models: [User, SharedSpace, Booking],
       dialectOptions: {},
@@ -43,9 +36,9 @@ const initializeSequelize = () => {
     }
 
     sequelize = new Sequelize(
-      DEV_DATABASE_NAME,
-      DEV_DATABASE_USERNAME,
-      DEV_DATABASE_PASSWORD,
+      DATABASE_NAME,
+      DATABASE_USERNAME,
+      DATABASE_PASSWORD,
       sequelizeConfigs as SequelizeOptions,
     );
   }

@@ -7,6 +7,13 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "outDir": "dist",
@@ -17,5 +24,5 @@
     }
   },
   "include": ["src/**/*.ts", "types/**/*.d.ts"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "dist"]
 }
