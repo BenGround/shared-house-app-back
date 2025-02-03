@@ -10,25 +10,20 @@ import { getUrlImg } from '../../utils/imageUtils';
 
 export const isValidDate = (date: string): boolean => moment(date, 'YYYY-MM-DD', true).isValid();
 
-export const adjustDate = (date: string, direction: 'start' | 'end'): Date => {
-  return direction === 'start'
-    ? moment(date).startOf('day').add(-1, 'days').toDate()
-    : moment(date).endOf('day').add(1, 'days').toDate();
-};
+export const adjustDate = (date: string, direction: 'start' | 'end'): Date =>
+  moment(date)
+    .startOf(direction === 'start' ? 'day' : 'day')
+    .add(direction === 'start' ? -1 : 1, 'days')
+    .toDate();
 
 const checkOverlappingBooking = async (sharedSpaceId: number, start: Date, end: Date, excludeBookingId?: number) => {
-  const query: any = {
+  return await Booking.findOne({
     where: {
       sharedSpaceId,
       [Op.and]: [{ startDate: { [Op.lt]: end } }, { endDate: { [Op.gt]: start } }],
+      ...(excludeBookingId && { id: { [Op.not]: excludeBookingId } }),
     },
-  };
-
-  if (excludeBookingId) {
-    query.where.id = { [Op.not]: excludeBookingId };
-  }
-
-  return await Booking.findOne(query);
+  });
 };
 
 const checkUserBookingLimit = async (
@@ -57,7 +52,7 @@ export const createOrUpdateBooking = async (req: Request, res: Response, isUpdat
     const now = new Date();
 
     if (!sharedSpaceId || !startDate || !endDate || (isUpdate && !bookingId)) {
-      return sendErrorResponse(res, 400, 'data.missing', 'Missing id param!');
+      return sendErrorResponse(res, 400, 'data.missing', 'Missing required parameters!');
     }
 
     const start = moment(startDate).utc().toDate();
@@ -68,25 +63,29 @@ export const createOrUpdateBooking = async (req: Request, res: Response, isUpdat
     if (isUpdate) {
       booking = await Booking.findOne({
         where: { id: bookingId },
-        include: [{ model: User, attributes: ['username', 'profilePicture', 'roomNumber'] }],
+        include: [{ model: User, attributes: ['username', 'profilePicture', 'roomNumber', 'id'] }],
       });
-      if (!booking || booking.dataValues.userId !== session.id) {
-        return sendErrorResponse(res, 403, 'booking.unauthorized', 'Unauthorized or booking not found!');
+
+      if (!booking) {
+        return sendErrorResponse(res, 404, 'booking.not.found', 'Booking not found!');
+      }
+
+      if (booking?.dataValues.userId !== session.id) {
+        return sendErrorResponse(res, 403, 'booking.unauthorized', 'You are not authorized to update this booking!');
       }
     }
 
-    const sharedId = isUpdate ? booking?.dataValues?.sharedSpaceId : sharedSpaceId;
-    const sharedSpace = await SharedSpace.findOne({
-      where: { id: sharedId },
-    });
+    const sharedId = isUpdate ? booking?.dataValues.sharedSpaceId : sharedSpaceId;
+    const sharedSpace = await SharedSpace.findByPk(sharedId);
+
     if (!sharedSpace) {
-      return sendErrorResponse(res, 404, 'sharespace.not.existing', 'Shared space not found!');
+      return sendErrorResponse(res, 404, 'sharespace.not.found', 'Shared space not found!');
     }
 
-    const { maxBookingHours, startDayTime, endDayTime } = sharedSpace.dataValues;
+    const { maxBookingHours, startDayTime, endDayTime, maxBookingByUser } = sharedSpace.dataValues;
 
     if (start < now) {
-      return sendErrorResponse(res, 400, 'bookings.cannotBookInPast', "You can't book in the past!");
+      return sendErrorResponse(res, 400, 'bookings.past', "You can't book in the past!");
     }
 
     const hourDiff = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
@@ -94,53 +93,49 @@ export const createOrUpdateBooking = async (req: Request, res: Response, isUpdat
       return sendErrorResponse(
         res,
         400,
-        'booking.duration.wrong',
-        `The booking duration must be between 1 and ${maxBookingHours} hours!`,
+        'booking.invalid.duration',
+        `Booking duration must be between 1 and ${maxBookingHours} hours!`,
       );
     }
 
-    const [startHour, startMinute] = startDayTime.split(':').map(Number);
-    const [endHour, endMinute] = endDayTime.split(':').map(Number);
-    const startTimeLimit = moment(startDate).utc().set({ hour: startHour, minute: startMinute, second: 0 }).toDate();
-    const endTimeLimit = moment(endDate).utc().set({ hour: endHour, minute: endMinute, second: 0 }).toDate();
+    const startTimeLimit = moment(startDate)
+      .utc()
+      .set({ hour: Number(startDayTime.split(':')[0]), minute: 0 })
+      .toDate();
+    const endTimeLimit = moment(endDate)
+      .utc()
+      .set({ hour: Number(endDayTime.split(':')[0]), minute: 0 })
+      .toDate();
 
     if (startDate < startTimeLimit || endDate > endTimeLimit) {
-      return sendErrorResponse(
-        res,
-        400,
-        'booking.outside.workinghours',
-        "Please book within the shared space's working hours!",
-      );
+      return sendErrorResponse(res, 400, 'booking.outside.hours', 'Booking must be within shared space working hours!');
     }
 
     if (await checkOverlappingBooking(sharedSpaceId, start, end, isUpdate ? bookingId : undefined)) {
-      return sendErrorResponse(res, 409, 'booking.already.existing', 'Time slot already booked!');
+      return sendErrorResponse(res, 409, 'booking.conflict', 'Time slot already booked!');
     }
 
     if (
-      await checkUserBookingLimit(
-        sharedSpaceId,
-        session.id,
-        sharedSpace.maxBookingByUser,
-        now,
-        isUpdate ? bookingId : undefined,
-      )
+      await checkUserBookingLimit(sharedSpaceId, session.id, maxBookingByUser, now, isUpdate ? bookingId : undefined)
     ) {
-      return sendErrorResponse(res, 400, 'booking.too.many', 'User booking limit reached!');
+      return sendErrorResponse(res, 400, 'booking.limit.exceeded', 'You have reached the booking limit!');
     }
 
     if (isUpdate) {
-      await booking!.update({ startDate: start.toISOString(), endDate: end.toISOString() });
-      const { username, picture, roomNumber } = booking?.dataValues?.user?.dataValues;
-      io.emit('updatedBooking', {
-        id: booking?.dataValues?.id,
-        username: username,
-        picture: getUrlImg(picture),
-        roomNumber: roomNumber,
-        startDate: start.toISOString(),
-        endDate: end.toISOString(),
-        sharedSpaceId: sharedId,
-      });
+      await booking!.update({ startDate: start, endDate: end });
+      if (booking) {
+        const { username, picture, roomNumber } = booking?.dataValues?.user?.dataValues;
+
+        io.emit('updatedBooking', {
+          id: booking?.dataValues?.id,
+          username: username,
+          picture: getUrlImg(picture),
+          roomNumber: roomNumber,
+          startDate: start.toISOString(),
+          endDate: end.toISOString(),
+          sharedSpaceId: sharedId,
+        });
+      }
     } else {
       booking = await Booking.create({
         startDate: start.toISOString(),
@@ -148,6 +143,7 @@ export const createOrUpdateBooking = async (req: Request, res: Response, isUpdat
         userId: session.id,
         sharedSpaceId,
       });
+
       io.emit('newBooking', {
         id: booking?.dataValues?.id,
         username: session.username,
@@ -171,7 +167,7 @@ export const createOrUpdateBooking = async (req: Request, res: Response, isUpdat
       },
     });
   } catch (err: unknown) {
-    console.log(err);
+    console.error('Booking Error:', err);
     return sendErrorResponse(res, 500, 'booking.error', 'Error processing booking');
   }
 };
