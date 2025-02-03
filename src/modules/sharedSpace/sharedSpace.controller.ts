@@ -3,9 +3,19 @@ import { Op, SequelizeScopeError, where } from 'sequelize';
 import { SharedSpace } from './sharedspace.model';
 
 export const adminCreateSharedspace = (req: Request<unknown, unknown, SharedSpace>, res: Response): void => {
-  const { nameCode, startDayTime, endDayTime, maxBookingHours, maxBookingByUser, description } = req.body;
+  const {
+    nameCode,
+    nameEn,
+    nameJp,
+    startDayTime,
+    endDayTime,
+    maxBookingHours,
+    maxBookingByUser,
+    descriptionEn,
+    descriptionJp,
+  } = req.body;
 
-  if (!nameCode || !startDayTime || !endDayTime || !maxBookingHours || !maxBookingByUser) {
+  if (!nameCode || !nameEn || !nameJp || !startDayTime || !endDayTime || !maxBookingHours || !maxBookingByUser) {
     res.status(400).send({
       errorCode: 'data.missing',
       message: 'Missing data!',
@@ -22,11 +32,14 @@ export const adminCreateSharedspace = (req: Request<unknown, unknown, SharedSpac
     .then(() => {
       const sharespace = new SharedSpace({
         nameCode,
+        nameEn,
+        nameJp,
         startDayTime,
         endDayTime,
         maxBookingHours,
         maxBookingByUser,
-        description,
+        descriptionEn,
+        descriptionJp,
       });
 
       sharespace.save();
@@ -45,9 +58,19 @@ export const adminUpdateSharedspace = async (
   req: Request<unknown, unknown, SharedSpace>,
   res: Response,
 ): Promise<void> => {
-  const { id, nameCode, startDayTime, endDayTime, maxBookingHours, maxBookingByUser, description } = req.body;
+  const {
+    nameCode,
+    nameEn,
+    nameJp,
+    startDayTime,
+    endDayTime,
+    maxBookingHours,
+    maxBookingByUser,
+    descriptionEn,
+    descriptionJp,
+  } = req.body;
 
-  if (!id || !nameCode || !startDayTime || !endDayTime || !maxBookingHours || !maxBookingByUser) {
+  if (!nameCode || !nameEn || !nameJp || !startDayTime || !endDayTime || !maxBookingHours || !maxBookingByUser) {
     res.status(400).send({
       errorCode: 'data.missing',
       message: 'Missing data!',
@@ -57,8 +80,18 @@ export const adminUpdateSharedspace = async (
 
   try {
     await SharedSpace.update(
-      { nameCode, startDayTime, endDayTime, maxBookingHours, maxBookingByUser },
-      { where: { id } },
+      {
+        nameCode,
+        nameEn,
+        nameJp,
+        startDayTime,
+        endDayTime,
+        maxBookingHours,
+        maxBookingByUser,
+        descriptionEn,
+        descriptionJp,
+      },
+      { where: { nameCode } },
     );
     res.status(204).send();
   } catch (error: any) {

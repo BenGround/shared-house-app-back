@@ -14,7 +14,19 @@ module.exports = {
         unique: true,
         type: Sequelize.STRING,
       },
-      description: {
+      nameEn: {
+        allowNull: false,
+        type: Sequelize.STRING,
+      },
+      nameJp: {
+        allowNull: false,
+        type: Sequelize.STRING,
+      },
+      descriptionEn: {
+        allowNull: true,
+        type: Sequelize.TEXT,
+      },
+      descriptionJp: {
         allowNull: true,
         type: Sequelize.TEXT,
       },
@@ -33,6 +45,10 @@ module.exports = {
       maxBookingByUser: {
         allowNull: false,
         type: Sequelize.INTEGER,
+      },
+      picture: {
+        allowNull: true,
+        type: Sequelize.STRING,
       },
       createdAt: {
         allowNull: false,

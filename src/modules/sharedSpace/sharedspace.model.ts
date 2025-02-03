@@ -8,9 +8,21 @@ export class SharedSpace extends Model {
   @Column
   nameCode!: string;
 
+  @AllowNull(false)
+  @Column
+  nameEn!: string;
+
+  @AllowNull(false)
+  @Column
+  nameJp!: string;
+
   @AllowNull(true)
   @Column
-  description: string = '';
+  descriptionEn: string = '';
+
+  @AllowNull(true)
+  @Column
+  descriptionJp: string = '';
 
   @AllowNull(false)
   @Column
