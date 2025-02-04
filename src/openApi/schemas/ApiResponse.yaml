@@ -1,0 +1,14 @@
+type: object
+properties:
+  data:
+    type: object
+    description: 'The actual data of the response'
+    nullable: true
+  message:
+    type: string
+    description: 'Additional message for the response'
+    nullable: true
+  errorCode:
+    type: string
+    description: "Response status (e.g., 'success', 'error')"
+    nullable: true

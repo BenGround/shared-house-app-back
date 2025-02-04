@@ -1,0 +1,5 @@
+description: Invalid data or missing fields
+content:
+  application/json:
+    schema:
+      $ref: '#/components/schemas/ApiResponse'

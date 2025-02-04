@@ -2,21 +2,22 @@ import { Application, Router } from 'express';
 import {
   checkSession,
   createPassword,
-  findByUsername,
   login,
   logout,
   update,
   deletePicture,
-  adminGetUsers,
-  adminUpdateUser,
-  adminSendPasswordEmail,
-  adminCreateUser,
-  adminDeleteUser,
   uploadImage,
   uploadProfilePicture,
 } from './user.controller';
 import checkUserConnection from '../../middlewares/checkUserConnection';
 import checkAdmin from '../../middlewares/checkAdmin';
+import {
+  adminCreateUser,
+  adminDeleteUser,
+  adminGetUsers,
+  adminSendPasswordEmail,
+  adminUpdateUser,
+} from './user.admin.controller';
 
 export default (app: Application): void => {
   app.post('/user/login', login);
@@ -29,7 +30,6 @@ export default (app: Application): void => {
   userRouter.put('/update', update);
   userRouter.put('/update/picture', uploadProfilePicture, uploadImage);
   userRouter.put('/delete/picture', deletePicture);
-  userRouter.get('/:username', findByUsername);
 
   app.use('/user', userRouter);
 

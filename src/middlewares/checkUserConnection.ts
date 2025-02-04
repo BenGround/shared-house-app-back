@@ -1,13 +1,14 @@
-import { Request, Response, NextFunction } from 'express';
-import { User } from '../modules/user/user.model';
+import { Response, NextFunction } from 'express';
 import { sendErrorResponse } from '../utils/errorUtils';
 import { checkingSession } from '../modules/user/user.helper';
+import { ApiResponse } from '../types/responses.type';
+import { AuthenticatedRequest } from '../types/requests.type';
 
-interface AuthenticatedRequest extends Request {
-  user?: User;
-}
-
-const checkUserConnection = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+const checkUserConnection = async (
+  req: AuthenticatedRequest,
+  res: Response<ApiResponse>,
+  next: NextFunction,
+): Promise<void> => {
   const error = await checkingSession(req);
 
   if (error) {

@@ -4,13 +4,14 @@ import crypto from 'crypto';
 import { getUrlImg } from './../../utils/imageUtils';
 import { sendErrorResponse } from '../../utils/errorUtils';
 import { UserSession } from '../../types/session.type';
+import { FrontUser } from '../../types/responses.type';
 
 export const frontUserInfo = (user: User, forAdmin: boolean = false) => {
-  const userInfos: Record<string, any> = {
-    username: user.username || null,
+  const userInfos: FrontUser = {
+    username: user.username ?? '',
     roomNumber: user.roomNumber,
-    email: user.email,
-    profilePicture: user.profilePicture ? getUrlImg(user.profilePicture) : null,
+    email: user.email ?? '',
+    profilePicture: getUrlImg(user.profilePicture),
     isAdmin: Boolean(user.isAdmin),
     ...(forAdmin && { isActive: user.isActive, id: user.id }),
   };
@@ -75,4 +76,9 @@ export const destroySession = (req: Request): Promise<void> => {
       }
     });
   });
+};
+
+export const checkRoomNumberExists = async (roomNumber: number): Promise<boolean> => {
+  const foundUsers = await User.findAll({ where: { roomNumber } });
+  return foundUsers.length > 0;
 };

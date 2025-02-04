@@ -1,14 +1,4 @@
-import {
-  AllowNull,
-  BeforeCreate,
-  BeforeUpdate,
-  BelongsTo,
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-} from 'sequelize-typescript';
+import { AllowNull, BelongsTo, Column, DataType, ForeignKey, Model, Table } from 'sequelize-typescript';
 import { User } from '../user/user.model';
 import { SharedSpace } from '../sharedSpace/sharedspace.model';
 
@@ -41,8 +31,4 @@ export class Booking extends Model {
 
   @BelongsTo(() => SharedSpace, { onDelete: 'CASCADE' })
   sharedSpace!: SharedSpace;
-
-  @BeforeCreate
-  @BeforeUpdate
-  static beforeCreateHook(instance: Booking): void {}
 }

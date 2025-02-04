@@ -1,0 +1,27 @@
+type: object
+properties:
+  username:
+    type: string
+    description: 'The username of the user'
+  roomNumber:
+    type: integer
+    description: 'The room number associated with the user'
+  email:
+    type: string
+    description: 'The email address of the user'
+  profilePicture:
+    type: string
+    description: "URL or path to the user's profile picture"
+    nullable: true
+  isAdmin:
+    type: boolean
+    description: 'Whether the user is an admin or not'
+  isActive:
+    type: boolean
+    description: 'Indicates if the user is active'
+    nullable: true
+required:
+  - roomNumber
+  - email
+  - isAdmin
+  - isActive

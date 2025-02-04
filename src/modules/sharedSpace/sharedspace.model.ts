@@ -1,14 +1,4 @@
-import {
-  AllowNull,
-  BeforeCreate,
-  BeforeUpdate,
-  Column,
-  DataType,
-  HasMany,
-  Model,
-  Table,
-  Unique,
-} from 'sequelize-typescript';
+import { AllowNull, Column, DataType, HasMany, Model, Table, Unique } from 'sequelize-typescript';
 import { Booking } from '../booking/booking.model';
 
 @Table
@@ -56,8 +46,4 @@ export class SharedSpace extends Model {
   @AllowNull(true)
   @Column(DataType.STRING)
   picture?: String;
-
-  @BeforeCreate
-  @BeforeUpdate
-  static beforeCreateHook(instance: SharedSpace): void {}
 }

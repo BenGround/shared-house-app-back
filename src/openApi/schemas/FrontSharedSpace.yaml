@@ -1,0 +1,45 @@
+type: object
+properties:
+  nameCode:
+    type: string
+    description: 'The code representing the shared space name.'
+  nameEn:
+    type: string
+    description: 'The name of the shared space in English.'
+  nameJp:
+    type: string
+    description: 'The name of the shared space in Japanese.'
+  descriptionEn:
+    type: string
+    description: 'The description of the shared space in English.'
+    nullable: true
+  descriptionJp:
+    type: string
+    description: 'The description of the shared space in Japanese.'
+    nullable: true
+  startDayTime:
+    type: string
+    format: date-time
+    description: 'The start time for the shared space availability.'
+  endDayTime:
+    type: string
+    format: date-time
+    description: 'The end time for the shared space availability.'
+  picture:
+    type: string
+    description: 'The URL or path to a picture of the shared space.'
+    nullable: true
+  maxBookingHours:
+    type: integer
+    description: 'The maximum number of hours a user can book the shared space.'
+  maxBookingByUser:
+    type: integer
+    description: 'The maximum number of bookings allowed per user.'
+required:
+  - nameCode
+  - nameEn
+  - nameJp
+  - startDayTime
+  - endDayTime
+  - maxBookingHours
+  - maxBookingByUser

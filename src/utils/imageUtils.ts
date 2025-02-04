@@ -5,11 +5,13 @@ import { getMinioClient } from './minioClient';
 
 dotenv.config();
 
-export function getUrlImg(profilePicture: String | undefined): String | null {
+export function getUrlImg(profilePicture: String | undefined): string | undefined {
+  if (!profilePicture) return undefined;
+
   const minioUrl = process.env.MINIO_URL;
   const bucketName = process.env.MINIO_BUCKET;
 
-  return minioUrl && profilePicture && bucketName ? `${minioUrl}/${bucketName}/${profilePicture}` : null;
+  return minioUrl && profilePicture && bucketName ? `${minioUrl}/${bucketName}/${profilePicture}` : undefined;
 }
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024;

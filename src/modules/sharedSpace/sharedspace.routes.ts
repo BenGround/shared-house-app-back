@@ -6,19 +6,13 @@ import {
   adminUpdateSharedspace,
   adminUploadImage,
   adminUploadPicture,
-  findById,
-  list,
-} from './sharedSpace.controller';
+} from './sharedSpace.admin.controller';
+import { list } from './sharedSpace.controller';
 import checkUserConnection from './../../middlewares/checkUserConnection';
 import checkAdmin from './../../middlewares/checkAdmin';
 
 export default (app: Application): void => {
-  const router = Router();
-  router.use(checkUserConnection);
-  router.get('/list', list);
-  router.get('/:id', findById);
-
-  app.use('/sharedspace', router);
+  app.get('/sharedspace/list', checkUserConnection, list);
 
   const adminRouter = Router();
   adminRouter.use(checkUserConnection, checkAdmin);

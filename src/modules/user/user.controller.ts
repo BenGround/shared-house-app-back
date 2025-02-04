@@ -1,6 +1,5 @@
 import { hash } from 'bcrypt';
 import { Request, Response } from 'express';
-import { Op } from 'sequelize';
 import { UserSession } from '../../types/session.type';
 import { User } from './user.model';
 import dotenv from 'dotenv';
@@ -8,20 +7,99 @@ import { getUrlImg, removeFileToMinio, upload, uploadFileToMinio } from './../..
 import { v4 as uuidv4 } from 'uuid';
 import { getMinioClient } from './../../utils/minioClient';
 import { sendErrorResponse } from '../../utils/errorUtils';
-import { checkingSession, frontUserInfo, generateResetToken, validateRequiredFields } from './user.helper';
-import { emailApi } from '../../utils/emailUtils';
+import { checkingSession, frontUserInfo, validateRequiredFields } from './user.helper';
+import { ApiResponse, FrontUser, FrontUserCreation } from '../../types/responses.type';
+import {
+  DATA_MISSING,
+  ERRORS_OCCURED,
+  FILE_MISSING,
+  USER_LOGOUT,
+  USER_NAME_INVALID,
+  USER_NOT_ACTIVE,
+  USER_NOT_FOUND,
+  USER_PASSWORD_MISMACTH,
+  USER_PICTURE_NOT_FOUND,
+  USER_SAVE_FAILED,
+  USER_TOKEN_INVALID,
+  USER_UPDATE_FAILED,
+  USER_UPDATE_PICTURE_FAILED,
+  USER_WRONG_CREDENTIALS,
+} from '../../types/errorCodes.type';
+import { AuthenticatedRequest } from '../../types/requests.type';
 
 dotenv.config();
 
+/**
+ * @swagger
+ * tags:
+ *   name: Users
+ *   description: The users managing API
+ */
+
+/**
+ * @swagger
+ * /user/upload-image/{id}:
+ *   post:
+ *     tags: [Users]
+ *     summary: Upload a new profile picture
+ *     description: Allows a user to upload a new profile picture. If a profile picture already exists, it will be replaced.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: The ID of the user uploading the profile picture.
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: The image file to upload as the new profile picture.
+ *     responses:
+ *       200:
+ *         description: Profile picture uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Success message indicating the profile picture was uploaded.
+ *                 data:
+ *                   type: string
+ *                   description: URL of the uploaded profile picture.
+ *       400:
+ *         description: No file uploaded or invalid file. User not logged or activated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ApiResponse"
+ *       500:
+ *         description: Internal error occurred while uploading the profile picture
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ApiResponse"
+ */
 export const uploadProfilePicture = upload.single('profilePicture');
-export const uploadImage = async (req: Request, res: Response): Promise<void> => {
+export const uploadImage = async (
+  req: Request<{ id: string }> & { file?: Express.Multer.File },
+  res: Response<ApiResponse<string>>,
+): Promise<void> => {
   if (!req.file) {
-    return sendErrorResponse(res, 400, 'file.missing', 'No file uploaded');
+    return sendErrorResponse(res, 400, FILE_MISSING, 'No file uploaded');
   }
 
   const bucketName = process.env.MINIO_BUCKET;
   if (!bucketName) {
-    return sendErrorResponse(res, 500, 'errors.occured', 'Bucket name is missing');
+    return sendErrorResponse(res, 500, ERRORS_OCCURED, 'Bucket name is missing');
   }
 
   const session = req.user;
@@ -39,24 +117,55 @@ export const uploadImage = async (req: Request, res: Response): Promise<void> =>
 
     res.status(200).send({
       message: 'Profile picture updated successfully.',
-      profilePicture: getUrlImg(objectName),
+      data: getUrlImg(objectName),
     });
   } catch (error) {
     console.error('Error uploading profile picture:', error);
-    return sendErrorResponse(res, 500, 'file.upload', 'Error uploading file!');
+    return sendErrorResponse(res, 500, USER_UPDATE_PICTURE_FAILED, 'Error uploading file!');
   }
 };
 
-export const deletePicture = async (req: Request, res: Response): Promise<void> => {
+/**
+ * @swagger
+ * /user/delete-picture:
+ *   delete:
+ *     tags: [Users]
+ *     summary: Delete the user's profile picture
+ *     description: Allows a user to delete their profile picture. If the user does not have a profile picture, an error is returned.
+ *     responses:
+ *       204:
+ *         description: Profile picture deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Success message indicating the profile picture was deleted.
+ *       400:
+ *         description: No profile picture to delete or bucket name missing. User not logged or activated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ApiResponse"
+ *       500:
+ *         description: Error deleting profile picture
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ApiResponse"
+ */
+export const deletePicture = async (req: Request<AuthenticatedRequest>, res: Response<ApiResponse>): Promise<void> => {
   const session = req.user;
   const bucketName = process.env.MINIO_BUCKET;
 
   if (!session?.profilePicture) {
-    return sendErrorResponse(res, 400, 'user.picture.not_found', 'No profile picture to delete');
+    return sendErrorResponse(res, 400, USER_PICTURE_NOT_FOUND, 'No profile picture to delete');
   }
 
   if (!bucketName) {
-    return sendErrorResponse(res, 400, 'errors.occured', 'Bucket name is missing');
+    return sendErrorResponse(res, 400, ERRORS_OCCURED, 'Bucket name is missing');
   }
 
   try {
@@ -73,45 +182,140 @@ export const deletePicture = async (req: Request, res: Response): Promise<void> 
     return sendErrorResponse(
       res,
       500,
-      'user.update.picture.failed',
+      USER_UPDATE_PICTURE_FAILED,
       'Failed to delete profile picture. Please try again later',
     );
   }
 };
 
-export const createPassword = async (req: Request, res: Response): Promise<void> => {
+/**
+ * @swagger
+ * /user/create-password:
+ *   post:
+ *     tags: [Users]
+ *     summary: Create a new password for the user
+ *     description: Allows a user to create a new password using a reset token. The password and confirmation must match.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *               - password
+ *               - confirmPassword
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 description: The token received by the user for resetting the password.
+ *               password:
+ *                 type: string
+ *                 description: The new password the user wants to set.
+ *               confirmPassword:
+ *                 type: string
+ *                 description: Confirmation of the new password to ensure it matches.
+ *     responses:
+ *       200:
+ *         description: Password successfully updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Success message.
+ *                 data:
+ *                   type: integer
+ *                   description: The user's room number.
+ *       400:
+ *         description: Invalid or expired token or password mismatch
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ApiResponse"
+ *       500:
+ *         description: Error updating password
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ApiResponse"
+ */
+export const createPassword = async (
+  req: Request<{}, {}, { token: string; password: string; confirmPassword: string }>,
+  res: Response<ApiResponse<string>>,
+): Promise<void> => {
   const { token, password, confirmPassword } = req.body;
 
   try {
     const user = await User.findOne({ where: { passwordToken: token } });
 
-    if (!user) return sendErrorResponse(res, 400, 'user.token.invalid', 'Invalid or expired token');
+    if (!user) return sendErrorResponse(res, 400, USER_TOKEN_INVALID, 'Invalid or expired token');
     if (password !== confirmPassword)
-      return sendErrorResponse(res, 400, 'user.password.not.match', 'Passwords do not match');
+      return sendErrorResponse(res, 400, USER_PASSWORD_MISMACTH, 'Passwords do not match');
 
     const hashPassword = await hash(password, 8);
 
     await user.update({ passwordToken: null, password: hashPassword });
 
-    res.send({ message: 'Password successfully updated', roomNumber: user.dataValues.roomNumber });
+    res.send({ message: 'Password successfully updated', data: user.dataValues.roomNumber });
   } catch (error) {
     console.error('Error creating password:', error);
-    return sendErrorResponse(res, 400, 'user.save.failed', 'Failed to update the password. Please try again later');
+    return sendErrorResponse(res, 400, USER_SAVE_FAILED, 'Failed to update the password. Please try again later');
   }
 };
 
-export const update = async (req: Request, res: Response): Promise<void> => {
+/**
+ * @swagger
+ * /user/update:
+ *   post:
+ *     tags: [Users]
+ *     summary: Update username
+ *     description: Updates the username of the currently authenticated user.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 description: "The new username to set for the authenticated user."
+ *     responses:
+ *       204:
+ *         description: Username updated successfully
+ *       400:
+ *         description: Missing or invalid parameters. User not logged or activated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ApiResponse"
+ *       500:
+ *         description: Error updating the username
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ApiResponse"
+ */
+export const update = async (
+  req: Request<AuthenticatedRequest, {}, { username: string }>,
+  res: Response<ApiResponse>,
+): Promise<void> => {
   const { username } = req.body;
   const session = req.user;
 
-  if (!username) return sendErrorResponse(res, 400, 'data.missing', 'Missing id param!');
+  if (!username) return sendErrorResponse(res, 400, DATA_MISSING, 'Missing id param!');
 
   const usernameRegex = /^[a-zA-Z0-9\s_\u3040-\u30FF\u4E00-\u9FFF\u00C0-\u00FF]{3,25}$/;
   if (!usernameRegex.test(username))
     return sendErrorResponse(
       res,
       400,
-      'user.username.invalid',
+      USER_NAME_INVALID,
       'Username must be between 3 and 25 characters long and contain only valid characters.',
     );
 
@@ -122,33 +326,118 @@ export const update = async (req: Request, res: Response): Promise<void> => {
     res.status(204).send({ message: 'Username updated successfully.' });
   } catch (error) {
     console.error('Error updating username:', error);
-    return sendErrorResponse(res, 500, 'user.update.failed', 'Failed to update username. Please try again later');
+    return sendErrorResponse(res, 500, USER_UPDATE_FAILED, 'Failed to update username. Please try again later');
   }
 };
 
-export const login = async (req: Request<unknown, unknown, User>, res: Response): Promise<void> => {
+/**
+ * @swagger
+ * /user/login:
+ *   post:
+ *     tags: [Users]
+ *     summary: Login user
+ *     description: Authenticate a user using room number and password.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - roomNumber
+ *               - password
+ *             properties:
+ *               roomNumber:
+ *                 type: string
+ *                 description: The room number of the user.
+ *               password:
+ *                 type: string
+ *                 format: password
+ *                 description: The user's password.
+ *     responses:
+ *       200:
+ *         description: Successfully logged in
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: "#/components/schemas/ApiResponse"
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: "#/components/schemas/FrontUser"
+ *       400:
+ *         description: Invalid credentials or missing fields
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ApiResponse"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ApiResponse"
+ */
+export const login = async (
+  req: Request<{}, {}, { roomNumber: string; password: string }>,
+  res: Response<ApiResponse<FrontUser>>,
+): Promise<void> => {
   const { roomNumber, password } = req.body;
 
   if (!validateRequiredFields(['roomNumber', 'password'], req.body, res)) return;
 
   try {
     const user = await User.findOne({ where: { roomNumber } });
-    if (!user) return sendErrorResponse(res, 400, 'user.not.found', 'Room number not found');
+    if (!user) return sendErrorResponse(res, 400, USER_NOT_FOUND, 'Room number not found');
 
     const isMatchingPassword = await user.comparePassword(password);
-    if (!isMatchingPassword) return sendErrorResponse(res, 400, 'user.password.not.match', "Passwords don't match");
+    if (!isMatchingPassword)
+      return sendErrorResponse(res, 400, USER_WRONG_CREDENTIALS, 'Incorrect room number or password!');
 
-    if (!user.dataValues.isActive) return sendErrorResponse(res, 400, 'user.not.active', 'User not activated');
+    if (!user.dataValues.isActive) return sendErrorResponse(res, 400, USER_NOT_ACTIVE, 'User not activated');
 
     (req.session as UserSession).user = user;
 
-    res.status(200).send({ status: true, user: frontUserInfo(user.dataValues) });
+    res.status(200).send({ data: frontUserInfo(user.dataValues) });
   } catch (error) {
-    return sendErrorResponse(res, 500, 'user.wrong.credentials', 'Incorrect room number or password!');
+    return sendErrorResponse(res, 500, USER_WRONG_CREDENTIALS, 'Incorrect room number or password!');
   }
 };
 
-export const checkSession = async (req: Request, res: Response): Promise<void> => {
+/**
+ * @swagger
+ * /user/check-session:
+ *   get:
+ *     tags: [Users]
+ *     summary: Check if the user session is valid
+ *     description: Verifies if the user is authenticated and the session is valid.
+ *     responses:
+ *       200:
+ *         description: Successfully checked the session and retrieved user data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: "#/components/schemas/ApiResponse"
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: "#/components/schemas/FrontUser"
+ *       400:
+ *         description: Invalid or expired session
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ApiResponse"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ApiResponse"
+ */
+export const checkSession = async (req: AuthenticatedRequest, res: Response<ApiResponse<FrontUser>>): Promise<void> => {
   const user = (req.session as UserSession).user;
   const error = await checkingSession(req);
 
@@ -156,143 +445,41 @@ export const checkSession = async (req: Request, res: Response): Promise<void> =
     return sendErrorResponse(res, error.status, error.code, error.message);
   }
 
-  res.status(200).send({ loggedIn: true, user: frontUserInfo(user) });
+  res.status(200).send({ data: frontUserInfo(user) });
 };
 
-export const logout = (req: Request, res: Response): void => {
+/**
+ * @swagger
+ * /user/logout:
+ *   post:
+ *     tags: [Users]
+ *     summary: Logout user
+ *     description: Logs out the user by destroying the session and clearing the session cookie.
+ *     responses:
+ *       200:
+ *         description: Successfully logged out
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: "#/components/schemas/ApiResponse"
+ *                 - type: object
+ *                   properties:
+ *                     message:
+ *                       type: string
+ *                       example: "Logout successful"
+ *       500:
+ *         description: An error occurred during logout
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ApiResponse"
+ */
+export const logout = (req: Request, res: Response<ApiResponse>): void => {
   req.session.destroy((err) => {
-    if (err) return sendErrorResponse(res, 500, 'user.logout', 'An error occurred while trying to logout!');
+    if (err) return sendErrorResponse(res, 500, USER_LOGOUT, 'An error occurred while trying to logout!');
 
     res.clearCookie('connect.sid');
     res.status(200).send({ message: 'Logout successful' });
   });
-};
-
-export const findByUsername = async (req: Request, res: Response): Promise<void> => {
-  const { username } = req.params;
-
-  if (!username) return sendErrorResponse(res, 400, 'data.missing', 'Missing id param!');
-
-  if (req.user.username !== username) return sendErrorResponse(res, 400, 'forbidden', 'Forbidden!');
-
-  try {
-    const user = await User.findOne({ where: { username } });
-    res.send(user);
-  } catch {
-    return sendErrorResponse(res, 500, 'user.not.found', `Error retrieving user with username=${username}`);
-  }
-};
-
-const checkRoomNumberExists = async (roomNumber: string): Promise<boolean> => {
-  const foundUsers = await User.findAll({ where: { roomNumber } });
-  return foundUsers.length > 0;
-};
-
-export const adminGetUsers = (req: Request, res: Response): void => {
-  User.findAll()
-    .then((users: User[] | null) => {
-      const userInfos = users?.map((user) => frontUserInfo(user.dataValues, true));
-      res.send(userInfos);
-    })
-    .catch(() => sendErrorResponse(res, 500, 'users.retrieving', 'Error retrieving users!'));
-};
-
-export const adminUpdateUser = async (req: Request, res: Response): Promise<void> => {
-  const { id, username, email, isAdmin, isActive } = req.body;
-
-  if (typeof isAdmin !== 'boolean' || typeof isActive !== 'boolean' || !email) {
-    return sendErrorResponse(res, 400, 'data.missing', 'Missing or invalid id param!');
-  }
-
-  try {
-    await User.update({ username, email, isAdmin, isActive }, { where: { id } });
-    res.status(204).send();
-  } catch (error) {
-    console.error('Error updating user:', error);
-    sendErrorResponse(res, 500, 'user.update', 'Failed to update user!');
-  }
-};
-
-export const adminSendPasswordEmail = async (req: Request, res: Response): Promise<void> => {
-  const { id } = req.params;
-
-  try {
-    const user = await User.findByPk(id);
-
-    if (!user) {
-      return sendErrorResponse(res, 404, 'user.not.found', `User not found with id=${id}`);
-    }
-
-    const to = user.dataValues.email;
-    const token = generateResetToken();
-    const subject = 'Password Create Request';
-    const text = 'Please click the link below to create your password.';
-    const html = `<p>Click the link below to create your password: ${process.env.FRONT_URL}/create-password?token=${token}</p>`;
-
-    const emailParams = {
-      sender: { email: process.env.EMAIL_USER },
-      to: [{ email: to }],
-      subject,
-      textContent: text,
-      htmlContent: html,
-    };
-
-    await emailApi.sendTransacEmail(emailParams);
-    await User.update({ passwordToken: token }, { where: { id: user.id } });
-
-    res.status(200).send();
-  } catch (error) {
-    console.error('Failed to send email:', error);
-    sendErrorResponse(res, 500, 'errors.occured', 'Failed to send email!');
-  }
-};
-
-export const adminCreateUser = async (req: Request, res: Response): Promise<void> => {
-  const { username, email, roomNumber, isAdmin, isActive } = req.body;
-
-  if (!roomNumber || !email || typeof isAdmin !== 'boolean' || typeof isActive !== 'boolean') {
-    return sendErrorResponse(res, 400, 'data.missing', 'Missing required parameters!');
-  }
-
-  try {
-    const roomNumberExists = await checkRoomNumberExists(roomNumber);
-
-    if (roomNumberExists) {
-      return sendErrorResponse(res, 400, 'user.room.number.already.exists', 'Room number already exists!');
-    }
-
-    const user = await User.create({
-      username,
-      email,
-      roomNumber,
-      isAdmin,
-      isActive,
-      password: 'PASSWORD_NOT_SET',
-    });
-
-    res.status(201).send(user);
-  } catch (error) {
-    console.error('Failed to create user:', error);
-    sendErrorResponse(res, 500, 'user.create', 'Failed to create user!');
-  }
-};
-
-export const adminDeleteUser = async (req: Request, res: Response): Promise<void> => {
-  const { roomNumbers } = req.body;
-
-  if (!roomNumbers) {
-    return sendErrorResponse(res, 400, 'data.missing', 'Missing room number(s) param!');
-  }
-
-  try {
-    await User.destroy({
-      where: {
-        roomNumber: { [Op.in]: roomNumbers },
-      },
-    });
-    res.status(200).send();
-  } catch (error) {
-    console.error('Error deleting user(s):', error);
-    sendErrorResponse(res, 500, 'users.delete', 'Failed to delete user(s)!');
-  }
 };

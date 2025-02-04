@@ -7,6 +7,8 @@ import { User } from '../user/user.model';
 import { io } from '../../index';
 import { sendErrorResponse } from '../../utils/errorUtils';
 import { getUrlImg } from '../../utils/imageUtils';
+import { ApiResponse, FrontBooking, FrontBookingCreation } from '../../types/responses.type';
+import { ERRORS_OCCURED } from '../../types/errorCodes.type';
 
 export const isValidDate = (date: string): boolean => moment(date, 'YYYY-MM-DD', true).isValid();
 
@@ -45,13 +47,18 @@ const checkUserBookingLimit = async (
   return userBookingsCount >= maxBookingByUser;
 };
 
-export const createOrUpdateBooking = async (req: Request, res: Response, isUpdate: boolean = false): Promise<void> => {
+export const createOrUpdateBooking = async (
+  req: Request<{}, {}, FrontBookingCreation | FrontBooking>,
+  res: Response<ApiResponse>,
+  isUpdate: boolean = false,
+): Promise<void> => {
   try {
-    const { sharedSpaceId, startDate, endDate, bookingId } = req.body;
+    const { sharedSpaceId, startDate, endDate } = req.body;
     const session = req.user;
     const now = new Date();
+    const id = isUpdate && 'id' in req.body ? req.body.id : undefined;
 
-    if (!sharedSpaceId || !startDate || !endDate || (isUpdate && !bookingId)) {
+    if (!sharedSpaceId || !startDate || !endDate || (isUpdate && !id)) {
       return sendErrorResponse(res, 400, 'data.missing', 'Missing required parameters!');
     }
 
@@ -62,7 +69,7 @@ export const createOrUpdateBooking = async (req: Request, res: Response, isUpdat
 
     if (isUpdate) {
       booking = await Booking.findOne({
-        where: { id: bookingId },
+        where: { id },
         include: [{ model: User, attributes: ['username', 'profilePicture', 'roomNumber', 'id'] }],
       });
 
@@ -107,17 +114,15 @@ export const createOrUpdateBooking = async (req: Request, res: Response, isUpdat
       .set({ hour: Number(endDayTime.split(':')[0]), minute: 0 })
       .toDate();
 
-    if (startDate < startTimeLimit || endDate > endTimeLimit) {
+    if (startDate < startTimeLimit.toISOString() || endDate > endTimeLimit.toISOString()) {
       return sendErrorResponse(res, 400, 'booking.outside.hours', 'Booking must be within shared space working hours!');
     }
 
-    if (await checkOverlappingBooking(sharedSpaceId, start, end, isUpdate ? bookingId : undefined)) {
+    if (await checkOverlappingBooking(sharedSpaceId, start, end, id)) {
       return sendErrorResponse(res, 409, 'booking.conflict', 'Time slot already booked!');
     }
 
-    if (
-      await checkUserBookingLimit(sharedSpaceId, session.id, maxBookingByUser, now, isUpdate ? bookingId : undefined)
-    ) {
+    if (await checkUserBookingLimit(sharedSpaceId, session.id, maxBookingByUser, now, id)) {
       return sendErrorResponse(res, 400, 'booking.limit.exceeded', 'You have reached the booking limit!');
     }
 
@@ -157,17 +162,33 @@ export const createOrUpdateBooking = async (req: Request, res: Response, isUpdat
 
     res.status(isUpdate ? 200 : 201).json({
       message: `Booking ${isUpdate ? 'updated' : 'created'} successfully!`,
-      booking: {
+      data: {
         id: booking?.id,
         username: session.username,
         picture: getUrlImg(session.profilePicture),
         roomNumber: session.roomNumber,
         startDate: start.toISOString(),
         endDate: end.toISOString(),
+        sharedSpaceId: sharedId,
       },
     });
   } catch (err: unknown) {
     console.error('Booking Error:', err);
     return sendErrorResponse(res, 500, 'booking.error', 'Error processing booking');
   }
+};
+
+export const validateAndParseId = (id: string, res: Response): number | null => {
+  if (!id) {
+    sendErrorResponse(res, 400, 'data.missing', 'Missing id param!');
+    return null;
+  }
+
+  const parsedId = parseInt(id, 10);
+  if (isNaN(parsedId)) {
+    sendErrorResponse(res, 400, ERRORS_OCCURED, 'Invalid shared space ID!');
+    return null;
+  }
+
+  return parsedId;
 };
