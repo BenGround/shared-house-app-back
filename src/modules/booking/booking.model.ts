@@ -5,11 +5,11 @@ import { SharedSpace } from '../sharedSpace/sharedspace.model';
 @Table
 export class Booking extends Model {
   @AllowNull(false)
-  @Column
+  @Column(DataType.DATE)
   startDate!: Date;
 
   @AllowNull(false)
-  @Column
+  @Column(DataType.DATE)
   endDate!: Date;
 
   @ForeignKey(() => User)

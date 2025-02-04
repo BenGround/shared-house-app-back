@@ -19,12 +19,12 @@ export class User extends Model {
   username: string | undefined = undefined;
 
   @AllowNull(false)
-  @Column
+  @Column(DataType.NUMBER)
   roomNumber!: number;
 
   @AllowNull(false)
   @Default(false)
-  @Column
+  @Column(DataType.BOOLEAN)
   isActive!: boolean;
 
   @AllowNull(true)
@@ -36,12 +36,12 @@ export class User extends Model {
   email: string | undefined = undefined;
 
   @AllowNull(false)
-  @Column
+  @Column(DataType.STRING)
   password!: string;
 
   @AllowNull(false)
   @Default(false)
-  @Column
+  @Column(DataType.BOOLEAN)
   isAdmin!: boolean;
 
   @HasMany(() => Booking)

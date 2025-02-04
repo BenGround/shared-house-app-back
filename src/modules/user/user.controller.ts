@@ -7,7 +7,7 @@ import { getUrlImg, removeFileToMinio, upload, uploadFileToMinio } from './../..
 import { v4 as uuidv4 } from 'uuid';
 import { getMinioClient } from './../../utils/minioClient';
 import { sendErrorResponse } from '../../utils/errorUtils';
-import { checkingSession, frontUserInfo, validateRequiredFields } from './user.helper';
+import { checkingSession, frontUserInfo, validateRequiredFields, validateUsername } from './user.helper';
 import { ApiResponse, FrontUser, FrontUserCreation } from '../../types/responses.type';
 import {
   DATA_MISSING,
@@ -310,8 +310,7 @@ export const update = async (
 
   if (!username) return sendErrorResponse(res, 400, DATA_MISSING, 'Missing id param!');
 
-  const usernameRegex = /^[a-zA-Z0-9\s_\u3040-\u30FF\u4E00-\u9FFF\u00C0-\u00FF]{3,25}$/;
-  if (!usernameRegex.test(username))
+  if (!validateUsername(username))
     return sendErrorResponse(
       res,
       400,

@@ -3,7 +3,7 @@ import { Op } from 'sequelize';
 import { User } from './user.model';
 import dotenv from 'dotenv';
 import { sendErrorResponse } from '../../utils/errorUtils';
-import { checkRoomNumberExists, frontUserInfo, generateResetToken } from './user.helper';
+import { checkRoomNumberExists, frontUserInfo, generateResetToken, validateDataUser } from './user.helper';
 import { emailApi } from '../../utils/emailUtils';
 import { ApiResponse, FrontUser, FrontUserCreation } from '../../types/responses.type';
 import {
@@ -111,8 +111,14 @@ export const adminUpdateUser = async (req: Request<{}, {}, FrontUser>, res: Resp
     return sendErrorResponse(res, 400, DATA_MISSING, 'Missing or invalid id param!');
   }
 
+  const validationError = validateDataUser(email, username);
+
+  if (validationError) {
+    return sendErrorResponse(res, validationError.status, validationError.code, validationError.message);
+  }
+
   try {
-    await User.update({ username, email, isAdmin, isActive }, { where: { id } });
+    await User.update({ username: username.trim(), email: email.trim(), isAdmin, isActive }, { where: { id } });
     res.status(204).send();
   } catch (error) {
     console.error('Error updating user:', error);
@@ -247,6 +253,12 @@ export const adminCreateUser = async (
     return sendErrorResponse(res, 400, DATA_MISSING, 'Missing required parameters!');
   }
 
+  const validationError = validateDataUser(email, username);
+
+  if (validationError) {
+    return sendErrorResponse(res, validationError.status, validationError.code, validationError.message);
+  }
+
   try {
     const roomNumberExists = await checkRoomNumberExists(roomNumber);
 
@@ -255,8 +267,8 @@ export const adminCreateUser = async (
     }
 
     const user = await User.create({
-      username,
-      email,
+      username: username.trim(),
+      email: email.trim(),
       roomNumber,
       isAdmin,
       isActive,

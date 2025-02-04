@@ -1,8 +1,5 @@
 type: object
 properties:
-  id:
-    type: integer
-    description: 'The ID of the shared space  '
   nameCode:
     type: string
     description: 'The code representing the shared space name.'
@@ -39,7 +36,6 @@ properties:
     type: integer
     description: 'The maximum number of bookings allowed per user.'
 required:
-  - id
   - nameCode
   - nameEn
   - nameJp

@@ -1,6 +1,6 @@
 export const DATA_MISSING = 'data.missing';
 export const DATA_CONFLICT = 'data.conflict';
-export const ERRORS_OCCURED = 'errors.occured';
+export const ERRORS_OCCURED = 'occured';
 export const FILE_MISSING = 'file.missing';
 
 export const SHAREDSPACE_LIST = 'sharedspace_list';
@@ -10,6 +10,13 @@ export const SHAREDSPACE_DELETE = 'sharespace.delete';
 export const SHAREDSPACE_NOT_FOUND = 'sharespace.not.found';
 export const SHAREDSPACE_PICTURE_NOT_FOUND = 'sharespace.picture.not_found';
 export const SHAREDSPACE_UPDATE_PICTURE_FAILED = 'sharedspace.update.picture.failed';
+export const SHAREDSPACE_NAMECODE_INVALID = 'sharedspace.name.code.invalid';
+export const SHAREDSPACE_NAMES_INVALID = 'sharedspace.name.invalid';
+export const SHAREDSPACE_DESCRIPTIONS_INVALID = 'sharedspace.description.invalid';
+export const SHAREDSPACE_MAX_BOOKING_HOURS_INVALID_LENGTH = 'sharedspace.max.booking.hours.invalid.length';
+export const SHAREDSPACE_MAX_BOOKING_BY_USER_INVALID_LENGTH = 'sharedspace.max.booking.by.user.invalid.length';
+export const SHAREDSPACE_DAY_TIME_INVALID = 'sharedspace.day.time.invalid';
+export const SHAREDSPACE_START_END_DAY_TIME_INVALID = 'sharedspace.sharedspace.start.end.day.time.invalid';
 
 export const BOOKING = 'booking';
 export const BOOKING_NOT_FOUND = 'booking.not.found';
@@ -31,3 +38,5 @@ export const USERS_RETRIEVING = 'users.retrieving';
 export const USERS_DELETE = 'users.delete';
 export const USER_ROOM_NUMBER_ALREADY_EXISTS = 'user.room.number.already.exists';
 export const USER_CREATE = 'user.create';
+export const USER_EMAIL_INVALID_LENGTH = 'user.email.invalid.length';
+export const USER_EMAIL_INVALID = 'user.email.invalid';

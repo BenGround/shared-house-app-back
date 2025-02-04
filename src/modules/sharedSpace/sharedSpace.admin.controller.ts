@@ -6,7 +6,7 @@ import { getMinioClient } from '../../utils/minioClient';
 import { getUrlImg } from '../../utils/imageUtils';
 import { sendErrorResponse } from '../../utils/errorUtils';
 import { frontShareSpaceInfo, validateSharedSpaceFields } from './sharedSpace.helper';
-import { ApiResponse, FrontSharedSpace } from '../../types/responses.type';
+import { ApiResponse, FrontSharedSpace, FrontSharedSpaceCreation } from '../../types/responses.type';
 import {
   DATA_CONFLICT,
   DATA_MISSING,
@@ -39,7 +39,7 @@ import {
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/FrontSharedSpace'
+ *             $ref: '#/components/schemas/FrontSharedSpaceCreation'
  *     responses:
  *       201:
  *         description: Successfully created a new shared space
@@ -72,7 +72,7 @@ import {
  *               $ref: '#/components/schemas/ApiResponse'
  */
 export const adminCreateSharedspace = async (
-  req: Request<{}, {}, FrontSharedSpace>,
+  req: Request<{}, {}, FrontSharedSpaceCreation>,
   res: Response<ApiResponse<FrontSharedSpace>>,
 ): Promise<void> => {
   if (!validateSharedSpaceFields(req, res)) return;
@@ -96,15 +96,15 @@ export const adminCreateSharedspace = async (
     }
 
     const newSpace = await SharedSpace.create({
-      nameCode,
-      nameEn,
-      nameJp,
+      nameCode: nameCode.trim(),
+      nameEn: nameEn.trim(),
+      nameJp: nameJp.trim(),
       startDayTime,
       endDayTime,
       maxBookingHours,
       maxBookingByUser,
-      descriptionEn,
-      descriptionJp,
+      descriptionEn: descriptionEn?.trim(),
+      descriptionJp: descriptionJp?.trim(),
     });
 
     if (!newSpace) {
@@ -165,6 +165,7 @@ export const adminUpdateSharedspace = async (
   if (!validateSharedSpaceFields(req, res)) return;
 
   const {
+    id,
     nameCode,
     nameEn,
     nameJp,
@@ -177,23 +178,24 @@ export const adminUpdateSharedspace = async (
   } = req.body;
 
   try {
-    const spaceToUpdate = await SharedSpace.findOne({ where: { nameCode } });
+    const spaceToUpdate = await SharedSpace.findOne({ where: { id } });
     if (!spaceToUpdate) {
       return sendErrorResponse(res, 404, SHAREDSPACE_NOT_FOUND, 'Shared space not found!');
     }
 
     await SharedSpace.update(
       {
-        nameEn,
-        nameJp,
+        nameCode: nameCode.trim(),
+        nameEn: nameEn.trim(),
+        nameJp: nameJp.trim(),
         startDayTime,
         endDayTime,
         maxBookingHours,
         maxBookingByUser,
-        descriptionEn,
-        descriptionJp,
+        descriptionEn: descriptionEn?.trim(),
+        descriptionJp: descriptionJp?.trim(),
       },
-      { where: { nameCode } },
+      { where: { id } },
     );
 
     res.status(204).send();

@@ -5,6 +5,7 @@ import { getUrlImg } from './../../utils/imageUtils';
 import { sendErrorResponse } from '../../utils/errorUtils';
 import { UserSession } from '../../types/session.type';
 import { FrontUser } from '../../types/responses.type';
+import { USER_EMAIL_INVALID, USER_EMAIL_INVALID_LENGTH, USER_NAME_INVALID } from '../../types/errorCodes.type';
 
 export const frontUserInfo = (user: User, forAdmin: boolean = false) => {
   const userInfos: FrontUser = {
@@ -81,4 +82,23 @@ export const destroySession = (req: Request): Promise<void> => {
 export const checkRoomNumberExists = async (roomNumber: number): Promise<boolean> => {
   const foundUsers = await User.findAll({ where: { roomNumber } });
   return foundUsers.length > 0;
+};
+
+export const validateUsername = (username: string): boolean => {
+  const usernameRegex = /^[a-zA-Z0-9\s_\u3040-\u30FF\u4E00-\u9FFF\u00C0-\u00FF]{3,25}$/;
+  return usernameRegex.test(username);
+};
+
+export const validateDataUser = (email: string, username: string) => {
+  if (email.length < 3 || email.length > 100) {
+    return { status: 400, code: USER_EMAIL_INVALID_LENGTH, message: 'Email must be between 3 and 150 characters' };
+  } else if (!/^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/.test(email)) {
+    return { status: 400, code: USER_EMAIL_INVALID, message: 'Email is invalid' };
+  }
+
+  if (username && !validateUsername(username)) {
+    return { status: 400, code: USER_NAME_INVALID, message: 'Username is invalid' };
+  }
+
+  return null;
 };

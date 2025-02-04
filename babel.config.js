@@ -4,7 +4,12 @@ module.exports = {
   overrides: [
     {
       test: /\.ts$/,
-      plugins: [['@babel/plugin-proposal-decorators', { legacy: true }]],
+      plugins: [
+        ['@babel/plugin-proposal-decorators', { legacy: true }],
+        ['@babel/plugin-transform-flow-strip-types'],
+        ['@babel/plugin-proposal-class-properties', { loose: true }],
+        ['babel-plugin-transform-typescript-metadata'],
+      ],
     },
   ],
 };

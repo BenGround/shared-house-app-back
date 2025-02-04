@@ -4,7 +4,11 @@ export interface ApiResponse<T = any> {
   data?: T;
 }
 
-export interface FrontSharedSpace {
+export type FrontSharedSpace = FrontSharedSpaceCreation & {
+  id?: number;
+};
+
+export interface FrontSharedSpaceCreation {
   nameCode: string;
   nameEn: string;
   nameJp: string;

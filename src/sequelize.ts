@@ -9,7 +9,7 @@ dotenv.config();
 
 let sequelize: Sequelize;
 
-const initializeSequelize = () => {
+const initializeSequelize = (): Sequelize => {
   const { NODE_ENV, DATABASE_HOST, DATABASE_NAME, DATABASE_USERNAME, DATABASE_PASSWORD, DATABASE_PORT } = process.env;
 
   if (!DATABASE_HOST || !DATABASE_NAME || !DATABASE_USERNAME) {
@@ -17,7 +17,7 @@ const initializeSequelize = () => {
   }
 
   if (!sequelize) {
-    const sequelizeConfigs = {
+    const sequelizeConfigs: SequelizeOptions = {
       host: DATABASE_HOST,
       port: parseInt(DATABASE_PORT ?? '5432'),
       dialect: 'postgres',

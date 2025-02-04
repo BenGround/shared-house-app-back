@@ -114,7 +114,8 @@ export const createOrUpdateBooking = async (
       .set({ hour: Number(endDayTime.split(':')[0]), minute: 0 })
       .toDate();
 
-    if (startDate < startTimeLimit.toISOString() || endDate > endTimeLimit.toISOString()) {
+    //TODO: find a better solution
+    if ((startDate as unknown as Date) < startTimeLimit || (endDate as unknown as Date) > endTimeLimit) {
       return sendErrorResponse(res, 400, 'booking.outside.hours', 'Booking must be within shared space working hours!');
     }
 
