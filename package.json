@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "nodemon",
-    "build": "tsc",
+    "build": "webpack --config webpack.config.js",
     "db:create": "sequelize-cli db:create",
     "db:migrate": "sequelize-cli db:migrate",
     "db:g:migration": "sequelize-cli migration:generate --name",
@@ -13,7 +13,6 @@
     "db:g:seed": "sequelize-cli seed:generate --name",
     "db:seeds": "sequelize-cli db:seed:all",
     "db:reseed": "sequelize-cli db:drop && sequelize-cli db:create && sequelize-cli db:migrate && sequelize-cli db:seed:all",
-    "dev": "ts-node index.ts",
     "test": "jest"
   },
   "keywords": [],
@@ -72,6 +71,7 @@
     "@types/swagger-ui-express": "^4.1.7",
     "@types/uuid": "^10.0.0",
     "@types/validator": "^13.12.2",
+    "babel-loader": "^9.2.1",
     "babel-plugin-transform-typescript-metadata": "^0.3.2",
     "eslint": "^9.17.0",
     "globals": "^15.14.0",
@@ -84,10 +84,15 @@
     "sequelize-cli": "^6.6.2",
     "supertest": "^7.0.0",
     "ts-jest": "^29.2.5",
+    "ts-loader": "^9.5.2",
     "ts-node": "^10.9.2",
+    "tsconfig-paths-webpack-plugin": "^4.2.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
-    "typescript-eslint": "^8.19.0"
+    "typescript-eslint": "^8.19.0",
+    "webpack": "^5.97.1",
+    "webpack-cli": "^6.0.1",
+    "webpack-node-externals": "^3.0.0"
   },
   "husky": {
     "hooks": {

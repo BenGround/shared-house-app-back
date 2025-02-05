@@ -1,16 +1,16 @@
-import * as dotenv from 'dotenv';
+import dotenv from 'dotenv';
 import express, { json, Request, Response, urlencoded } from 'express';
 import cors from 'cors';
-import registerRoutes from './routes.js';
-import registerSession from './session.js';
+import registerRoutes from './routes';
+import registerSession from './session';
 import http from 'http';
 import { Server as SocketIOServer } from 'socket.io';
-import { initializedSequelize } from './sequelize.js';
+import { initializedSequelize } from './sequelize';
 import hidePoweredBy from 'hide-powered-by';
 import helmet from 'helmet';
 import swaggerJSDoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
-import { swaggerOptions } from './openApi/swagger.js';
+import { swaggerOptions } from './openApi/swagger';
 
 dotenv.config();
 

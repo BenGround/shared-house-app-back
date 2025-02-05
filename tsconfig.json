@@ -15,7 +15,7 @@
     "noImplicitThis": true,
     "alwaysStrict": true,
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
+    "emitDecoratorMetadata": false,
     "outDir": "dist",
     "rootDir": "src",
     "baseUrl": "src",

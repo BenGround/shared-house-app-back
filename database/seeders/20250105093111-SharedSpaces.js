@@ -1,7 +1,7 @@
 'use strict';
 
 /** @type {import('sequelize-cli').Migration} */
-module.exports = {
+export default {
   async up(queryInterface, Sequelize) {
     return await queryInterface.bulkInsert('SharedSpaces', [
       {
@@ -52,7 +52,7 @@ module.exports = {
     ]);
   },
 
-  async down(queryInterface, Sequelize) {
-    return await queryInterface.bulkDelete('Users', null, {});
+  async down(queryInterface) {
+    return await queryInterface.bulkDelete('SharedSpaces', null, {});
   },
 };

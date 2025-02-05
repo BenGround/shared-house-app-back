@@ -1,7 +1,7 @@
 'use strict';
 
 /** @type {import('sequelize-cli').Migration} */
-module.exports = {
+export default {
   async up(queryInterface, Sequelize) {
     const users = [
       {
@@ -15,16 +15,14 @@ module.exports = {
       },
     ];
 
-    const getUser = (roomNumber) => {
-      return {
-        roomNumber,
-        password: 'PASSWORD_NOT_SET',
-        isAdmin: false,
-        isActive: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-    };
+    const getUser = (roomNumber) => ({
+      roomNumber,
+      password: 'PASSWORD_NOT_SET',
+      isAdmin: false,
+      isActive: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
 
     for (let i = 101; i <= 299; i++) {
       users.push(getUser(i));
@@ -33,7 +31,7 @@ module.exports = {
     return await queryInterface.bulkInsert('Users', users);
   },
 
-  async down(queryInterface, Sequelize) {
+  async down(queryInterface) {
     return await queryInterface.bulkDelete('Users', null, {});
   },
 };

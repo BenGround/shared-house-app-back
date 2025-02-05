@@ -1,6 +1,7 @@
 'use strict';
+
 /** @type {import('sequelize-cli').Migration} */
-module.exports = {
+export default {
   async up(queryInterface, Sequelize) {
     await queryInterface.createTable('SharedSpaces', {
       id: {
@@ -60,6 +61,7 @@ module.exports = {
       },
     });
   },
+
   async down(queryInterface) {
     await queryInterface.dropTable('SharedSpaces');
   },

@@ -9,6 +9,18 @@ module.exports = {
         ['@babel/plugin-transform-flow-strip-types'],
         ['@babel/plugin-proposal-class-properties', { loose: true }],
         ['babel-plugin-transform-typescript-metadata'],
+        [
+          'transform-imports',
+          {
+            patterns: [
+              {
+                groupName: './',
+                groupMatches: ['.*'],
+                packageName: './$1.js',
+              },
+            ],
+          },
+        ],
       ],
     },
   ],
