@@ -12,7 +12,7 @@ import {
 import { Booking } from '../booking/booking.model';
 import { compare } from 'bcrypt';
 
-@Table
+@Table({ tableName: 'Users' })
 export class User extends Model {
   @AllowNull(true)
   @Column(DataType.STRING)

@@ -405,7 +405,7 @@ export const login = async (
 
     res.status(200).send({ data: frontUserInfo(user.dataValues) });
   } catch (error) {
-    return sendErrorResponse(res, 500, USER_WRONG_CREDENTIALS, 'Incorrect room number or password!');
+    return sendErrorResponse(res, 500, USER_WRONG_CREDENTIALS, '' + error);
   }
 };
 

@@ -17,9 +17,9 @@ export default {
 
     const getUser = (roomNumber) => ({
       roomNumber,
-      password: 'PASSWORD_NOT_SET',
+      password: '$2b$08$RyhZG9AQu9V72MH.S4Uqau7xt.poDmmM34eycHzhtTGwq3nY0a8pG',
       isAdmin: false,
-      isActive: false,
+      isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
     });

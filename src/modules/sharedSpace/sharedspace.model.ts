@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import { AllowNull, Column, DataType, HasMany, Model, Table, Unique } from 'sequelize-typescript';
 import { Booking } from '../booking/booking.model';
 
-@Table
+@Table({ tableName: 'SharedSpaces' })
 export class SharedSpace extends Model {
   @Unique('nameCode')
   @AllowNull(false)

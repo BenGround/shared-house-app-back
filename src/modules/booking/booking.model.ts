@@ -2,7 +2,7 @@ import { AllowNull, BelongsTo, Column, DataType, ForeignKey, Model, Table } from
 import { User } from '../user/user.model';
 import { SharedSpace } from '../sharedSpace/sharedspace.model';
 
-@Table
+@Table({ tableName: 'Bookings' })
 export class Booking extends Model {
   @AllowNull(false)
   @Column(DataType.DATE)

@@ -353,7 +353,7 @@ export const adminUploadImage = async (
     await SharedSpace.update({ picture: objectName }, { where: { id } });
     res.status(200).send({ message: 'Picture updated successfully.', data: getUrlImg(objectName) });
   } catch (error) {
-    return sendErrorResponse(res, 500, SHAREDSPACE_UPDATE_PICTURE_FAILED, 'Failed to update profile picture.');
+    return sendErrorResponse(res, 500, SHAREDSPACE_UPDATE_PICTURE_FAILED, 'Failed to update picture.');
   }
 };
 
