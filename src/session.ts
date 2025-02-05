@@ -2,12 +2,13 @@ import dotenv from 'dotenv';
 import { Application } from 'express';
 import session from 'express-session';
 import { Sequelize as SequelizeTypescript } from 'sequelize-typescript';
-import { Pool, PoolConfig } from 'pg';
+import pg, { PoolConfig } from 'pg';
 import connectPgSimple from 'connect-pg-simple';
 import * as fs from 'fs';
 
 const { DATABASE_HOST, DATABASE_PORT, DATABASE_USERNAME, DATABASE_PASSWORD, DATABASE_NAME, SESSION_SECRET } =
   process.env;
+const { Pool } = pg;
 
 dotenv.config();
 

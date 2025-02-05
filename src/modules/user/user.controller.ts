@@ -7,8 +7,7 @@ import { getUrlImg, removeFileToMinio, upload, uploadFileToMinio } from './../..
 import { v4 as uuidv4 } from 'uuid';
 import { getMinioClient } from './../../utils/minioClient';
 import { sendErrorResponse } from '../../utils/errorUtils';
-import { checkingSession, frontUserInfo, validateRequiredFields, validateUsername } from './user.helper';
-import { ApiResponse, FrontUser, FrontUserCreation } from '../../types/responses.type';
+import { checkingSession, frontUserInfo, validateRequiredFields } from './user.helper';
 import {
   DATA_MISSING,
   ERRORS_OCCURED,
@@ -16,7 +15,6 @@ import {
   USER_LOGOUT,
   USER_NAME_INVALID,
   USER_NOT_ACTIVE,
-  USER_NOT_FOUND,
   USER_PASSWORD_MISMACTH,
   USER_PICTURE_NOT_FOUND,
   USER_SAVE_FAILED,
@@ -24,7 +22,11 @@ import {
   USER_UPDATE_FAILED,
   USER_UPDATE_PICTURE_FAILED,
   USER_WRONG_CREDENTIALS,
-} from '../../types/errorCodes.type';
+  ApiResponse,
+  FrontUser,
+  passwordHasError,
+  validateUsername,
+} from '@benhart44/shared-house-shared';
 import { AuthenticatedRequest } from '../../types/requests.type';
 
 dotenv.config();
@@ -255,6 +257,9 @@ export const createPassword = async (
     if (password !== confirmPassword)
       return sendErrorResponse(res, 400, USER_PASSWORD_MISMACTH, 'Passwords do not match');
 
+    const error = passwordHasError(password);
+    if (error) return sendErrorResponse(res, 400, error, 'Password is not valid');
+
     const hashPassword = await hash(password, 8);
 
     await user.update({ passwordToken: null, password: hashPassword });
@@ -388,7 +393,7 @@ export const login = async (
 
   try {
     const user = await User.findOne({ where: { roomNumber } });
-    if (!user) return sendErrorResponse(res, 400, USER_NOT_FOUND, 'Room number not found');
+    if (!user) return sendErrorResponse(res, 400, USER_WRONG_CREDENTIALS, 'Incorrect room number or password!');
 
     const isMatchingPassword = await user.comparePassword(password);
     if (!isMatchingPassword)

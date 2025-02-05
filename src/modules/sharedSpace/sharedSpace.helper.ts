@@ -2,7 +2,6 @@ import { Request, Response } from 'express';
 import { SharedSpace } from './sharedspace.model';
 import { getUrlImg } from '../../utils/imageUtils';
 import { sendErrorResponse } from '../../utils/errorUtils';
-import { FrontSharedSpace, FrontSharedSpaceCreation } from '../../types/responses.type';
 import {
   DATA_MISSING,
   SHAREDSPACE_DAY_TIME_INVALID,
@@ -12,10 +11,20 @@ import {
   SHAREDSPACE_NAMECODE_INVALID,
   SHAREDSPACE_NAMES_INVALID,
   SHAREDSPACE_START_END_DAY_TIME_INVALID,
-} from '../../types/errorCodes.type';
+  FrontSharedSpace,
+  FrontSharedSpaceCreation,
+  validateNameCode,
+  validateName,
+  validateDescription,
+  validateMaxBookingHours,
+  validateMaxBookingByUser,
+  validateFormatDayTime,
+  isStartDayTimeAfterEndDayTime,
+} from '@benhart44/shared-house-shared';
 
 export const frontShareSpaceInfo = (sharedSpace: SharedSpace): FrontSharedSpace => ({
   ...sharedSpace,
+  id: sharedSpace.id,
   startDayTime: formatSharedSpaceDayTime(sharedSpace.startDayTime),
   endDayTime: formatSharedSpaceDayTime(sharedSpace.endDayTime),
   picture: getUrlImg(sharedSpace.picture),
@@ -42,28 +51,22 @@ export const validateSharedSpaceFields = (
     return false;
   }
 
-  const namesRegex = /^[a-zA-Z0-9\s_\u3040-\u30FF\u4E00-\u9FFF]{3,25}$/;
-  const nameCodeRegex = /^[a-zA-Z0-9_]{3,25}$/;
-
-  if (!nameCodeRegex.test(nameCode)) {
+  if (!validateNameCode(nameCode)) {
     sendErrorResponse(res, 400, SHAREDSPACE_NAMECODE_INVALID, 'Name code is invalid!');
     return false;
   }
 
-  if (!namesRegex.test(nameEn) || !namesRegex.test(nameJp)) {
+  if (!(validateName(nameEn) && validateName(nameJp))) {
     sendErrorResponse(res, 400, SHAREDSPACE_NAMES_INVALID, 'Names are invalids!');
     return false;
   }
 
-  if (
-    (descriptionEn && (descriptionEn.length < 5 || descriptionEn.length > 300)) ||
-    (descriptionJp && (descriptionJp.length < 5 || descriptionJp.length > 300))
-  ) {
+  if (!(validateDescription(descriptionEn) && validateDescription(descriptionJp))) {
     sendErrorResponse(res, 400, SHAREDSPACE_DESCRIPTIONS_INVALID, 'Descriptions are invalids!');
     return false;
   }
 
-  if (maxBookingHours < 1 || maxBookingHours > 24) {
+  if (!validateMaxBookingHours(maxBookingHours)) {
     sendErrorResponse(
       res,
       400,
@@ -73,7 +76,7 @@ export const validateSharedSpaceFields = (
     return false;
   }
 
-  if (maxBookingByUser < 1 || maxBookingByUser > 100) {
+  if (!validateMaxBookingByUser(maxBookingByUser)) {
     sendErrorResponse(
       res,
       400,
@@ -83,19 +86,11 @@ export const validateSharedSpaceFields = (
     return false;
   }
 
-  const timeRegex = /^(?:[01]?\d|2[0-3]):([0-5]\d)$/;
-
-  if (!timeRegex.test(startDayTime) || !timeRegex.test(endDayTime)) {
+  if (!(validateFormatDayTime(startDayTime) && validateFormatDayTime(endDayTime))) {
     sendErrorResponse(res, 400, SHAREDSPACE_DAY_TIME_INVALID, 'Invalid length for max booking by user attribute!');
   }
 
-  const [startHour, startMinute] = startDayTime.split(':').map(Number);
-  const [endHour, endMinute] = endDayTime.split(':').map(Number);
-
-  const startTotalMinutes = startHour * 60 + startMinute;
-  const endTotalMinutes = endHour * 60 + endMinute;
-
-  if (startTotalMinutes >= endTotalMinutes) {
+  if (isStartDayTimeAfterEndDayTime(startDayTime, endDayTime)) {
     sendErrorResponse(res, 400, SHAREDSPACE_START_END_DAY_TIME_INVALID, 'Start day time is after end day time!');
   }
 

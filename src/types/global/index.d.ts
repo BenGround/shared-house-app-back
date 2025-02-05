@@ -15,3 +15,18 @@ declare global {
     }
   }
 }
+
+declare module 'sib-api-v3-sdk' {
+  export interface ApiClient {
+    authentications: {
+      [key: string]: {
+        apiKey: string;
+      };
+    };
+  }
+
+  export class TransactionalEmailsApi {}
+
+  export const ApiClient: ApiClient;
+  export const TransactionalEmailsApi: TransactionalEmailsApi;
+}

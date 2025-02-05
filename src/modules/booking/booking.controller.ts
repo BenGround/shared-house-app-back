@@ -8,14 +8,17 @@ import { getUrlImg } from './../../utils/imageUtils';
 import { io } from '../../index';
 import { sendErrorResponse } from '../../utils/errorUtils';
 import { adjustDate, createOrUpdateBooking, isValidDate, validateAndParseId } from './booking.helper';
-import { ApiResponse, FrontBooking, FrontBookingCreation } from '../../types/responses.type';
 import {
+  ApiResponse,
+  FrontBooking,
+  FrontBookingCreation,
+  MinimizeFrontBooking,
   BOOKING,
   BOOKING_ERROR_DELETE,
   BOOKING_NOT_ALLOWED_DELETE,
   BOOKING_NOT_FOUND,
   DATA_MISSING,
-} from '../../types/errorCodes.type';
+} from '@benhart44/shared-house-shared';
 
 /**
  * @swagger
@@ -369,4 +372,64 @@ export const deleteBooking = (req: Request<{ id: string }>, res: Response<ApiRes
     .catch(() => {
       sendErrorResponse(res, 500, BOOKING_ERROR_DELETE, 'Error deleting booking');
     });
+};
+
+/**
+ * @swagger
+ * /bookings/user:
+ *   get:
+ *     tags: [Bookings]
+ *     summary: Get all bookings of session user
+ *     description: Retrieves all user's bookings from all the shared spaces.
+ *     responses:
+ *       200:
+ *         description: List of bookings
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: "#/components/schemas/ApiResponse"
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: array
+ *                       items:
+ *                         $ref: "#/components/schemas/MinimizeFrontBooking"
+ *       500:
+ *         description: Error retrieving bookings
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ApiResponse"
+ */
+export const findUserBookings = async (
+  req: Request,
+  res: Response<ApiResponse<MinimizeFrontBooking[]>>,
+): Promise<void> => {
+  const now = new Date();
+
+  try {
+    const bookings = await Booking.findAll({
+      where: {
+        endDate: {
+          [Op.gt]: now,
+        },
+        userId: req.user.id,
+      },
+      order: [['startDate', 'ASC']],
+    });
+
+    const formattedBookings = bookings.map((booking) => {
+      return {
+        id: booking.dataValues.id,
+        startDate: moment.utc(booking.dataValues.startDate).tz('Asia/Tokyo').format('YYYY-MM-DD HH:mm:ss'),
+        endDate: moment.utc(booking.dataValues.endDate).tz('Asia/Tokyo').format('YYYY-MM-DD HH:mm:ss'),
+        sharedSpaceId: booking.dataValues.sharedSpaceId,
+      };
+    });
+
+    res.status(200).json({ data: formattedBookings });
+  } catch (error) {
+    sendErrorResponse(res, 500, BOOKING, 'Error retrieving bookings');
+  }
 };

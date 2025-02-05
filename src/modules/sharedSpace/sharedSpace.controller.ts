@@ -2,8 +2,7 @@ import { Request, Response } from 'express';
 import { SharedSpace } from './sharedspace.model';
 import { sendErrorResponse } from '../../utils/errorUtils';
 import { frontShareSpaceInfo } from './sharedSpace.helper';
-import { ApiResponse, FrontSharedSpace } from '../../types/responses.type';
-import { SHAREDSPACE_LIST } from '../../types/errorCodes.type';
+import { ApiResponse, FrontSharedSpace, SHAREDSPACE_LIST } from '@benhart44/shared-house-shared';
 
 /**
  * @swagger

@@ -7,8 +7,18 @@ import { User } from '../user/user.model';
 import { io } from '../../index';
 import { sendErrorResponse } from '../../utils/errorUtils';
 import { getUrlImg } from '../../utils/imageUtils';
-import { ApiResponse, FrontBooking, FrontBookingCreation } from '../../types/responses.type';
-import { ERRORS_OCCURED } from '../../types/errorCodes.type';
+import {
+  BOOKING_CONFLICT,
+  BOOKING_ERROR,
+  BOOKING_LIMIT_EXCEEDED,
+  BOOKING_OUTSIDE_WORKING_HOURS,
+  BOOKING_PAST,
+  BOOKING_UNAUTHORIZED,
+  ERRORS_OCCURED,
+  ApiResponse,
+  FrontBooking,
+  FrontBookingCreation,
+} from '@benhart44/shared-house-shared';
 
 export const isValidDate = (date: string): boolean => moment(date, 'YYYY-MM-DD', true).isValid();
 
@@ -78,7 +88,7 @@ export const createOrUpdateBooking = async (
       }
 
       if (booking?.dataValues.userId !== session.id) {
-        return sendErrorResponse(res, 403, 'booking.unauthorized', 'You are not authorized to update this booking!');
+        return sendErrorResponse(res, 403, BOOKING_UNAUTHORIZED, 'You are not authorized to update this booking!');
       }
     }
 
@@ -92,7 +102,7 @@ export const createOrUpdateBooking = async (
     const { maxBookingHours, startDayTime, endDayTime, maxBookingByUser } = sharedSpace.dataValues;
 
     if (start < now) {
-      return sendErrorResponse(res, 400, 'bookings.past', "You can't book in the past!");
+      return sendErrorResponse(res, 400, BOOKING_PAST, "You can't book in the past!");
     }
 
     const hourDiff = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
@@ -100,7 +110,7 @@ export const createOrUpdateBooking = async (
       return sendErrorResponse(
         res,
         400,
-        'booking.outside.workinghours',
+        BOOKING_OUTSIDE_WORKING_HOURS,
         `Booking duration must be between 1 and ${maxBookingHours} hours!`,
       );
     }
@@ -116,15 +126,20 @@ export const createOrUpdateBooking = async (
 
     //TODO: find a better solution
     if ((startDate as unknown as Date) < startTimeLimit || (endDate as unknown as Date) > endTimeLimit) {
-      return sendErrorResponse(res, 400, 'booking.outside.hours', 'Booking must be within shared space working hours!');
+      return sendErrorResponse(
+        res,
+        400,
+        BOOKING_OUTSIDE_WORKING_HOURS,
+        'Booking must be within shared space working hours!',
+      );
     }
 
     if (await checkOverlappingBooking(sharedSpaceId, start, end, id)) {
-      return sendErrorResponse(res, 409, 'booking.conflict', 'Time slot already booked!');
+      return sendErrorResponse(res, 409, BOOKING_CONFLICT, 'Time slot already booked!');
     }
 
     if (await checkUserBookingLimit(sharedSpaceId, session.id, maxBookingByUser, now, id)) {
-      return sendErrorResponse(res, 400, 'booking.limit.exceeded', 'You have reached the booking limit!');
+      return sendErrorResponse(res, 400, BOOKING_LIMIT_EXCEEDED, 'You have reached the booking limit!');
     }
 
     if (isUpdate) {
@@ -175,7 +190,7 @@ export const createOrUpdateBooking = async (
     });
   } catch (err: unknown) {
     console.error('Booking Error:', err);
-    return sendErrorResponse(res, 500, 'booking.error', 'Error processing booking');
+    return sendErrorResponse(res, 500, BOOKING_ERROR, 'Error processing booking');
   }
 };
 

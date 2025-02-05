@@ -5,7 +5,6 @@ import dotenv from 'dotenv';
 import { sendErrorResponse } from '../../utils/errorUtils';
 import { checkRoomNumberExists, frontUserInfo, generateResetToken, validateDataUser } from './user.helper';
 import { emailApi } from '../../utils/emailUtils';
-import { ApiResponse, FrontUser, FrontUserCreation } from '../../types/responses.type';
 import {
   DATA_MISSING,
   ERRORS_OCCURED,
@@ -15,7 +14,10 @@ import {
   USER_ROOM_NUMBER_ALREADY_EXISTS,
   USER_UPDATE_FAILED,
   USERS_RETRIEVING,
-} from '../../types/errorCodes.type';
+  ApiResponse,
+  FrontUser,
+  FrontUserCreation,
+} from '@benhart44/shared-house-shared';
 
 dotenv.config();
 

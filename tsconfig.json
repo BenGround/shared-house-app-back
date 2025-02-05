@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
     "target": "ESNext",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "ESNext",
+    "moduleResolution": "node",
     "typeRoots": ["./src/types", "./node_modules/@types"],
     "esModuleInterop": true,
     "skipLibCheck": true,

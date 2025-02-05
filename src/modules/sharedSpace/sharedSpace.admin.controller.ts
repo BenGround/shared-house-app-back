@@ -6,7 +6,6 @@ import { getMinioClient } from '../../utils/minioClient';
 import { getUrlImg } from '../../utils/imageUtils';
 import { sendErrorResponse } from '../../utils/errorUtils';
 import { frontShareSpaceInfo, validateSharedSpaceFields } from './sharedSpace.helper';
-import { ApiResponse, FrontSharedSpace, FrontSharedSpaceCreation } from '../../types/responses.type';
 import {
   DATA_CONFLICT,
   DATA_MISSING,
@@ -18,7 +17,10 @@ import {
   SHAREDSPACE_PICTURE_NOT_FOUND,
   SHAREDSPACE_UPDATE,
   SHAREDSPACE_UPDATE_PICTURE_FAILED,
-} from '../../types/errorCodes.type';
+  ApiResponse,
+  FrontSharedSpace,
+  FrontSharedSpaceCreation,
+} from '@benhart44/shared-house-shared';
 
 /**
  * @swagger

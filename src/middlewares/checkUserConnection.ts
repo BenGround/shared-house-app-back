@@ -1,7 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { sendErrorResponse } from '../utils/errorUtils';
 import { checkingSession } from '../modules/user/user.helper';
-import { ApiResponse } from '../types/responses.type';
+import { ApiResponse } from '@benhart44/shared-house-shared';
 import { AuthenticatedRequest } from '../types/requests.type';
 
 const checkUserConnection = async (

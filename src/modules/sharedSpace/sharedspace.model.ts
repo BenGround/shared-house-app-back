@@ -1,9 +1,10 @@
+import 'reflect-metadata';
 import { AllowNull, Column, DataType, HasMany, Model, Table, Unique } from 'sequelize-typescript';
 import { Booking } from '../booking/booking.model';
 
 @Table
 export class SharedSpace extends Model {
-  @Unique
+  @Unique('nameCode')
   @AllowNull(false)
   @Column(DataType.STRING)
   nameCode!: string;

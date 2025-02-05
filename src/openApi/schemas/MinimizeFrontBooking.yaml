@@ -1,0 +1,21 @@
+type: object
+properties:
+  id:
+    type: integer
+    description: The ID of the booking.
+  startDate:
+    type: string
+    format: date-time
+    description: The start date and time of the booking.
+  endDate:
+    type: string
+    format: date-time
+    description: The end date and time of the booking.
+  sharedSpaceId:
+    type: integer
+    description: The ID of the shared space being booked.
+required:
+  - id
+  - startDate
+  - endDate
+  - sharedSpaceId
