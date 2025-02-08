@@ -20,7 +20,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@benhart44/shared-house-shared": "^1.0.1",
+    "@benhart44/shared-house-shared": "^1.0.2",
     "bcrypt": "^5.1.1",
     "bcryptjs": "^2.4.3",
     "connect-pg-simple": "^10.0.0",
